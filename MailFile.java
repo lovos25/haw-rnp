@@ -22,7 +22,7 @@ public class MailFile {
     // Init logger
     static Logger logger;
 
-    public static void main(String args[]) throws IOException {
+    public static void main(String args[]) throws IOException, InterruptedException {
         //if (!(0 < args.length)) {
         //    throw new SyntaxException("Did not give any arguments");
         //}
@@ -38,7 +38,7 @@ public class MailFile {
         String senderHost = "";
         String senderPort = "";
         // Receiver
-        String receiverEmail = "till.pohland@haw-hamburg.de";//args[2];
+        String receiverEmail = "pagan.metall@gmx.de";//args[2];
         // Email content
         String emailSubject = "";
         String emailText = "";
@@ -55,7 +55,6 @@ public class MailFile {
             BufferedReader reader = new BufferedReader(file);
 
             String data;
-            String obj;
             String line = reader.readLine();
             String nextLine;
 
@@ -132,11 +131,12 @@ public class MailFile {
             logger.info("Created SMTP Object");
         }
 
-        public boolean send(String sender, String receiver, String subject, String text, int senderPort, String senderUsername, String senderPassword) throws IOException {
-            logger.info("Sending");
+        public boolean send(String sender, String receiver, String subject, String text, int senderPort, String senderUsername, String senderPassword) throws IOException, InterruptedException {
+            logger.info("Starting socket setup");
             InputStream inputStream;
             OutputStream outputStream;
             Socket socket;
+            boolean ssl;
 
             if (senderPort == 587 || senderPort == 465) {
                 logger.info("Establishing SSL/TLS connection");
@@ -154,33 +154,35 @@ public class MailFile {
                 return false;
             }
 
-            logger.info("Socket is not null, sending...");
+            logger.info("Sending...");
 
             inputStream = socket.getInputStream();
             outputStream = socket.getOutputStream();
             br = new BufferedReader(new InputStreamReader(inputStream));
             pw = new PrintWriter(new OutputStreamWriter(outputStream));
 
-            logger.info("" + localHost.getHostName());
-            pw.println("HELO " + localHost.getHostName());
-            logger.info("HELO " + br.readLine());
+            pw.println("EHLO " + mailHost);
+            logger.info("EHLO " + br.readLine());
 
-            pw.println("AUTH PLAIN " + senderPassword);
-            logger.info("AUTH " +  br.readLine());
+            pw.println("AUTH PLAIN");
+            pw.println(senderUsername);
+            pw.println(senderPassword);
+            logger.info(br.readLine());
 
             pw.println("MAIL From:<" + sender + ">");
             logger.info("From " + br.readLine());
 
             pw.println("RCPT TO:<" + receiver + ">");
-            logger.info("RCPT " + br.readLine());
+            //logger.info("RCPT " + br.readLine());
 
             pw.println("DATA");
-            logger.info("DATA " + br.readLine());
+            //logger.info("DATA " + br.readLine());
             pw.println("Subject " + subject);
             pw.print(text);
-            logger.info("Text " + br.readLine());
+            //logger.info("Text " + br.readLine());
 
             pw.println("QUIT");
+
 
             logger.info("Leaving send and closing socket");
 
