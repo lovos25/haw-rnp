@@ -1,19 +1,16 @@
 package com.bai;
 
-import jdk.nashorn.internal.runtime.regexp.joni.exception.SyntaxException;
+/**
+ * Created by zujiry on 4/10/17.
+ */
+import sun.rmi.runtime.Log;
 
-import javax.activation.DataHandler;
-import javax.activation.DataSource;
-import javax.activation.FileDataSource;
-import javax.mail.*;
-import javax.mail.internet.InternetAddress;
-import javax.mail.internet.MimeBodyPart;
-import javax.mail.internet.MimeMessage;
-import javax.mail.internet.MimeMultipart;
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
-import java.util.Properties;
+import java.util.Base64;
+import javax.net.ssl.SSLSocketFactory;
+import java.io.*;
+import java.net.InetAddress;
+import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
@@ -25,11 +22,14 @@ public class MailFile {
     // Init logger
     static Logger logger;
 
-    public static void main(String args[]) {
+    public static void main(String args[]) throws IOException {
         //if (!(0 < args.length)) {
         //    throw new SyntaxException("Did not give any arguments");
         //}
-        enableLogging();
+
+        //Logging
+        final boolean LOGGING = true;
+        enableLogging(LOGGING);
 
         // Sender
         String senderUsername = "";
@@ -38,16 +38,16 @@ public class MailFile {
         String senderHost = "";
         String senderPort = "";
         // Receiver
-        String receiverEmail = "amanpreet.kaur@haw-hamburg.de";//args[2];
+        String receiverEmail = "till.pohland@haw-hamburg.de";//args[2];
         // Email content
-        String emailSubject = "xxxx pussycatdolls xxxx";
-        String emailText = "Goenn dir den Anhang";
+        String emailSubject = "";
+        String emailText = "";
         // Attachment
         String fileName = "Anhang";
         String attachmentFilePath = "/home/zujiry/Documents/Anhang.jpg";
         String filePath = "/home/zujiry/Documents/Kontodaten";//args[3];
 
-        logger.info("Reading File");
+        logger.info("Reading data file");
 
         try {
             // Read from specified file
@@ -57,22 +57,32 @@ public class MailFile {
             String data;
             String obj;
             String line = reader.readLine();
+            String nextLine;
 
             logger.info("Entering While-Loop");
+
             while (line != null) {
-                logger.info("" + line);
+                logger.info("Reads: " + line);
                 if (line.startsWith("#")) {
                     data = line;
-                    if(data.equals("#Sender")){
-                            senderEmail = reader.readLine();
-                    } else if(data.equals("#User")) {
-                            senderUsername = reader.readLine();
-                    } else if(data.equals("#Password")) {
+                    if (data.equals("#Text")) {
+                        nextLine = reader.readLine();
+                        while (!(nextLine == null)) {
+                            emailText += nextLine;
+                            nextLine = reader.readLine();
+                        }
+                    } else if (data.equals("#Sender")) {
+                        senderEmail = reader.readLine();
+                    } else if (data.equals("#User")) {
+                        senderUsername = reader.readLine();
+                    } else if (data.equals("#Password")) {
                         senderPassword = reader.readLine();
-                    } else if(data.equals("#Host")) {
+                    } else if (data.equals("#Host")) {
                         senderHost = reader.readLine();
-                    } else if(data.equals("#Port")) {
+                    } else if (data.equals("#Port")) {
                         senderPort = reader.readLine();
+                    } else if (data.equals("#Subject")) {
+                        emailSubject = reader.readLine();
                     } else logger.info("Missed something in document of sender data");
                 }
                 line = reader.readLine();
@@ -81,81 +91,122 @@ public class MailFile {
             e.printStackTrace();
         }
 
-        logger.info("Configuring Properties");
+        //Checking correctness of data from given file
+        logger.info("Checking correctness of data");
 
-        Properties props = new Properties();
-        props.put("mail.smtp.auth", "true");
-        props.put("mail.smtp.starttls.enable", "true");
-        props.put("mail.smtp.host", senderHost);
-        props.put("mail.smtp.port", senderPort);
+        if (senderEmail.length() <= 0 || senderUsername.length() <= 0 || senderPassword.length() <= 0 || senderHost.length() <= 0 || senderPort.length() <= 0) {
+            throw new IOException("Data given of the sender is incorrect, please validate in the userdata configuration");
+        }
 
-        String finalSenderUsername = senderUsername;
-        String finalSenderPassword = senderPassword;
+        String senderUsernameB64 = Base64.getEncoder().encodeToString(senderUsername.getBytes());
+        String senderPasswordB64 = Base64.getEncoder().encodeToString(senderPassword.getBytes());
 
-        logger.info("Authenticating");
+        logger.info("Starting sending of smtp mail");
 
-        Session session = Session.getDefaultInstance(props,
-                new javax.mail.Authenticator() {
-                    protected PasswordAuthentication getPasswordAuthentication() {
-                        return new PasswordAuthentication(finalSenderUsername, finalSenderPassword);
-                    }
-                });
+        SMTP mail = new SMTP(senderHost,logger);
 
-        try {
+        boolean mailCheck = (mail == null);
+        logger.info("Is mail null?: " + mailCheck);
 
-            logger.info("Creating Message");
-            // Create and configure message
-            Message message = new MimeMessage(session);
-            message.setFrom(new InternetAddress(senderEmail));
-            message.setRecipients(Message.RecipientType.TO,
-                    InternetAddress.parse(receiverEmail));
-            message.setSubject(emailSubject);
-
-            // For the attachement, we need two parts (Multipart)
-            Multipart multipart = new MimeMultipart();
-
-            // Create message text part
-            BodyPart messageBodyPart = new MimeBodyPart();
-            messageBodyPart.setText(emailText);
-            multipart.addBodyPart(messageBodyPart);
-
-            logger.info("Adding attachement");
-            // Create attachement part
-            messageBodyPart = new MimeBodyPart();
-            DataSource source = new FileDataSource(attachmentFilePath);
-            messageBodyPart.setDataHandler(new DataHandler(source));
-            messageBodyPart.setFileName(fileName);
-            multipart.addBodyPart(messageBodyPart);
-
-            // Build and send message
-            message.setContent(multipart);
-            message.saveChanges();
-
-            logger.info("Sending message");
-            Transport.send(message);
-
-            logger.info("Boomchakalaka, send mail");
-
-        } catch (MessagingException e) {
-            throw new RuntimeException(e);
+        if (mail != null){
+            if (mail.send(senderEmail,receiverEmail,emailText, emailSubject, Integer.valueOf(senderPort),senderUsernameB64,senderPasswordB64)){
+                logger.info("Email sent");
+            } else {
+                logger.info("Email could not be sent");
+            }
         }
     }
 
-    private static void enableLogging() {
-        logger = Logger.getLogger("EmailLog");
-        FileHandler fh;
+    //SMTP class to send data
+    static class SMTP {
+        InetAddress mailHost;
+        InetAddress localHost;
+        BufferedReader br;
+        PrintWriter pw;
+        Logger logger;
 
-        try {
-            // This block configure the logger with handler and formatter
-            fh = new FileHandler("/home/zujiry/Documents/EmailLogFile.log");
-            logger.addHandler(fh);
-            SimpleFormatter formatter = new SimpleFormatter();
-            fh.setFormatter(formatter);
+        public SMTP(String senderHost, Logger logger) throws UnknownHostException {
+            mailHost = InetAddress.getByName(senderHost);
+            localHost = InetAddress.getLocalHost();
+            this.logger = logger;
+            logger.info("Created SMTP Object");
+        }
 
-        } catch (SecurityException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
+        public boolean send(String sender, String receiver, String subject, String text, int senderPort, String senderUsername, String senderPassword) throws IOException {
+            logger.info("Sending");
+            InputStream inputStream;
+            OutputStream outputStream;
+            Socket socket;
+
+            if (senderPort == 587 || senderPort == 465) {
+                logger.info("Establishing SSL/TLS connection");
+                SSLSocketFactory sslSocketFactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
+                socket = sslSocketFactory.createSocket(mailHost,senderPort);
+            } else {
+                logger.info("Establishing unencrypted connection");
+                socket = new Socket(mailHost,senderPort);
+            }
+
+            logger.info("Checking Socket, connected? " + socket.isConnected());
+
+            if (socket == null){
+                logger.info("Socket could not be created correctly");
+                return false;
+            }
+
+            logger.info("Socket is not null, sending...");
+
+            inputStream = socket.getInputStream();
+            outputStream = socket.getOutputStream();
+            br = new BufferedReader(new InputStreamReader(inputStream));
+            pw = new PrintWriter(new OutputStreamWriter(outputStream));
+
+            logger.info("" + localHost.getHostName());
+            pw.println("HELO " + localHost.getHostName());
+            logger.info("HELO " + br.readLine());
+
+            pw.println("AUTH PLAIN " + senderPassword);
+            logger.info("AUTH " +  br.readLine());
+
+            pw.println("MAIL From:<" + sender + ">");
+            logger.info("From " + br.readLine());
+
+            pw.println("RCPT TO:<" + receiver + ">");
+            logger.info("RCPT " + br.readLine());
+
+            pw.println("DATA");
+            logger.info("DATA " + br.readLine());
+            pw.println("Subject " + subject);
+            pw.print(text);
+            logger.info("Text " + br.readLine());
+
+            pw.println("QUIT");
+
+            logger.info("Leaving send and closing socket");
+
+            socket.close();
+            return true;
+        }
+
+    }
+
+    private static void enableLogging(boolean enable) {
+        if(enable) {
+            logger = Logger.getLogger("EmailLog");
+            FileHandler fh;
+
+            try {
+                // This block configure the logger with handler and formatter
+                fh = new FileHandler("/home/zujiry/Documents/EmailLogFile.log");
+                logger.addHandler(fh);
+                SimpleFormatter formatter = new SimpleFormatter();
+                fh.setFormatter(formatter);
+
+            } catch (SecurityException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 }
