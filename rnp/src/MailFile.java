@@ -1,11 +1,10 @@
-package com.bai;
-
 /**
  * Created by zujiry on 4/10/17.
  */
 import sun.rmi.runtime.Log;
 
 import java.util.Base64;
+import javax.activation.FileDataSource;
 import javax.net.ssl.SSLSocketFactory;
 import java.io.*;
 import java.net.InetAddress;
@@ -23,9 +22,7 @@ public class MailFile {
     static Logger logger;
 
     public static void main(String args[]) throws IOException, InterruptedException {
-        //if (!(0 < args.length)) {
-        //    throw new SyntaxException("Did not give any arguments");
-        //}
+        //if (args.length != 2) throw new IOException("Please enter two arguments, correct syntax is:\njava -cp . MailFile <recipient mail address> <path to attachment file>");
 
         //Logging
         final boolean LOGGING = true;
@@ -38,14 +35,14 @@ public class MailFile {
         String senderHost = "";
         String senderPort = "";
         // Receiver
-        String receiverEmail = "pagan.metall@gmx.de";//args[2];
+        String receiverEmail = "till.pohland@haw-hamburg.de";//args[2];
         // Email content
         String emailSubject = "";
         String emailText = "";
         // Attachment
         String fileName = "Anhang";
-        String attachmentFilePath = "/home/zujiry/Documents/Anhang.jpg";
-        String filePath = "/home/zujiry/Documents/Kontodaten";//args[3];
+        String attachmentFilePath = "D:\\Programming-Utill\\Files\\Hi.doc";
+        String filePath = "D:\\Programming-Utill\\Files\\EmailData.txt";
 
         logger.info("Reading data file");
 
@@ -97,6 +94,7 @@ public class MailFile {
             throw new IOException("Data given of the sender is incorrect, please validate in the userdata configuration");
         }
 
+        File attachmentFile = new File(attachmentFilePath);
         String senderUsernameB64 = Base64.getEncoder().encodeToString(senderUsername.getBytes());
         String senderPasswordB64 = Base64.getEncoder().encodeToString(senderPassword.getBytes());
 
@@ -108,7 +106,7 @@ public class MailFile {
         logger.info("Is mail null?: " + mailCheck);
 
         if (mail != null){
-            if (mail.send(senderEmail,receiverEmail,emailText, emailSubject, Integer.valueOf(senderPort),senderUsernameB64,senderPasswordB64)){
+            if (mail.send(senderEmail,receiverEmail,emailText, emailSubject, Integer.valueOf(senderPort),senderUsernameB64,senderPasswordB64,fileName,attachmentFile)){
                 logger.info("Email sent");
             } else {
                 logger.info("Email could not be sent");
@@ -121,9 +119,10 @@ public class MailFile {
         InetAddress mailHost;
         InetAddress localHost;
         BufferedReader br;
-        PrintWriter pw;
+        BufferedWriter pw;
         Logger logger;
 
+        //Constructor
         public SMTP(String senderHost, Logger logger) throws UnknownHostException {
             mailHost = InetAddress.getByName(senderHost);
             localHost = InetAddress.getLocalHost();
@@ -131,12 +130,12 @@ public class MailFile {
             logger.info("Created SMTP Object");
         }
 
-        public boolean send(String sender, String receiver, String subject, String text, int senderPort, String senderUsername, String senderPassword) throws IOException, InterruptedException {
+        //Sending of the Mail
+        public boolean send(String sender, String receiver, String text, String subject, int senderPort, String senderUsername, String senderPassword, String fileName,File attachmentFile) throws IOException, InterruptedException {
             logger.info("Starting socket setup");
             InputStream inputStream;
             OutputStream outputStream;
             Socket socket;
-            boolean ssl;
 
             if (senderPort == 587 || senderPort == 465) {
                 logger.info("Establishing SSL/TLS connection");
@@ -159,30 +158,61 @@ public class MailFile {
             inputStream = socket.getInputStream();
             outputStream = socket.getOutputStream();
             br = new BufferedReader(new InputStreamReader(inputStream));
-            pw = new PrintWriter(new OutputStreamWriter(outputStream));
+            pw = new BufferedWriter(new OutputStreamWriter(outputStream));
+            String mimeBoundary = "DataSeperatorString";
 
-            pw.println("EHLO " + mailHost);
-            logger.info("EHLO " + br.readLine());
+            logger.info("Initial: " +  br.readLine());
+            send("EHLO " + mailHost.getHostName(),pw);
+            logger.info("\nEHLO " + br.readLine() + "\n" + br.readLine() + "\n" + br.readLine() +
+                    "\n" + br.readLine() + "\n" + br.readLine() + "\n" + br.readLine() +
+                    "\n" + br.readLine() + "\n" + br.readLine() + "\n" + br.readLine());
 
-            pw.println("AUTH PLAIN");
-            pw.println(senderUsername);
-            pw.println(senderPassword);
-            logger.info(br.readLine());
+            send("AUTH LOGIN",pw);
+            send(senderUsername,pw);
+            send(senderPassword,pw);
+            logger.info("AUTH " + br.readLine() + " " + br.readLine());
+            logger.info("SUCCESS? " + br.readLine());
 
-            pw.println("MAIL From:<" + sender + ">");
+            send("MAIL From:<" + sender + ">",pw);
             logger.info("From " + br.readLine());
 
-            pw.println("RCPT TO:<" + receiver + ">");
-            //logger.info("RCPT " + br.readLine());
+            send("RCPT TO:<" + receiver + ">",pw);
+            logger.info("RCPT " + br.readLine());
 
-            pw.println("DATA");
-            //logger.info("DATA " + br.readLine());
-            pw.println("Subject " + subject);
-            pw.print(text);
-            //logger.info("Text " + br.readLine());
+            send("DATA",pw);
+            send("MIME-Version: 1.0",pw);
+            send("Subject: " + subject + "\n",pw);
+            send("Content-Type: multipart/mixed; boundary=\"" + mimeBoundary +"\"",pw);
+            send("\r\n--" + mimeBoundary,pw);
+            send("Content-Type: text/plain\r\n",pw);
+            send(text,pw);
+            send("\r\n--" + mimeBoundary,pw);
 
-            pw.println("QUIT");
+            // Send attachment
+            send("Content-Type: text/plain; name="+fileName+"\r\n",pw);
+            //send("Content-Type: application/msword; file=" + fileName,pw);
+            send("Content-Disposition: attachment;filename=\""+fileName+"\"",pw);
+            send("Content-Transfer-Encoding: base64\r\n",pw);
+            byte[] bytes = loadFile(new File("D:\\Programming-Utill\\Files\\File.txt"));
+            String encoded = Base64.getMimeEncoder().encodeToString(bytes);
 
+            send(encoded,pw);
+
+
+            //byte[] bytes = loadFile(attachmentFile);
+            //byte[] encoded = Base64.getEncoder().encode(bytes);
+            //String encodedString = new String(encoded);
+            //send("Hello",pw);
+            //send(encodedString,pw);
+            send("\r\n\r\n--" + mimeBoundary + "--\r\n",pw);
+
+
+            send("\r\n.\r\n.",pw);
+            logger.info("" +  br.readLine());
+            logger.info("QUEUED " + br.readLine());
+            logger.info("" + br.readLine());
+            send("QUIT",pw);
+            logger.info("BYE " + br.readLine());
 
             logger.info("Leaving send and closing socket");
 
@@ -190,6 +220,34 @@ public class MailFile {
             return true;
         }
 
+        private void send(String string, BufferedWriter pw) throws IOException {
+            pw.write(string + "\r\n");
+            pw.flush();
+        }
+
+        private static byte[] loadFile(File file) throws IOException {
+            InputStream is = new FileInputStream(file);
+
+            long length = file.length();
+            if (length > Integer.MAX_VALUE) {
+                // File is too large
+            }
+            byte[] bytes = new byte[(int)length];
+
+            int offset = 0;
+            int numRead = 0;
+            while (offset < bytes.length
+                    && (numRead=is.read(bytes, offset, bytes.length-offset)) >= 0) {
+                offset += numRead;
+            }
+
+            if (offset < bytes.length) {
+                throw new IOException("Could not completely read file "+file.getName());
+            }
+
+            is.close();
+            return bytes;
+        }
     }
 
     private static void enableLogging(boolean enable) {
