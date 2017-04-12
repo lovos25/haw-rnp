@@ -41,14 +41,14 @@ public class MailFile {
         String emailText = "";
         // Attachment
         String fileName = "Anhang";
-        String attachmentFilePath = "D:\\Programming-Utill\\Files\\Hi.doc";
-        String filePath = "D:\\Programming-Utill\\Files\\EmailData.txt";
+        String attachmentFilePath = "D:\\Git-Repos\\haw-rnp\\rnp\\src\\TextFile.docx";
+        String senderConfigFilePath = "D:\\Git-Repos\\haw-rnp\\rnp\\src\\EmailData.txt";
 
         logger.info("Reading data file");
 
         try {
             // Read from specified file
-            FileReader file = new FileReader(filePath);
+            FileReader file = new FileReader(senderConfigFilePath);
             BufferedReader reader = new BufferedReader(file);
 
             String data;
@@ -155,12 +155,14 @@ public class MailFile {
 
             logger.info("Sending...");
 
+            //Streams
             inputStream = socket.getInputStream();
             outputStream = socket.getOutputStream();
             br = new BufferedReader(new InputStreamReader(inputStream));
             pw = new BufferedWriter(new OutputStreamWriter(outputStream));
             String mimeBoundary = "DataSeperatorString";
 
+            //Sending
             logger.info("Initial: " +  br.readLine());
             send("EHLO " + mailHost.getHostName(),pw);
             logger.info("\nEHLO " + br.readLine() + "\n" + br.readLine() + "\n" + br.readLine() +
@@ -180,35 +182,38 @@ public class MailFile {
             logger.info("RCPT " + br.readLine());
 
             send("DATA",pw);
+            logger.info("" + br.readLine());
             send("MIME-Version: 1.0",pw);
-            send("Subject: " + subject + "\n",pw);
+            send("Subject: " + subject,pw);
             send("Content-Type: multipart/mixed; boundary=\"" + mimeBoundary +"\"",pw);
             send("\r\n--" + mimeBoundary,pw);
+
             send("Content-Type: text/plain\r\n",pw);
             send(text,pw);
+            send("\r\n\r\n",pw);
             send("\r\n--" + mimeBoundary,pw);
 
-            // Send attachment
-            send("Content-Type: text/plain; name="+fileName+"\r\n",pw);
-            //send("Content-Type: application/msword; file=" + fileName,pw);
+            // Send doc
+            send("Content-Type: text/plain; name="+fileName,pw);
             send("Content-Disposition: attachment;filename=\""+fileName+"\"",pw);
-            send("Content-Transfer-Encoding: base64\r\n",pw);
-            byte[] bytes = loadFile(new File("D:\\Programming-Utill\\Files\\File.txt"));
-            String encoded = Base64.getMimeEncoder().encodeToString(bytes);
-
+            send("Content-Transfer-Encoding: base64",pw);
+            byte[] bytes = loadFile(new File("D:\\Git-Repos\\haw-rnp\\rnp\\src\\File.txt"));
+            String encoded = Base64.getEncoder().encodeToString(bytes);
             send(encoded,pw);
 
-
-            //byte[] bytes = loadFile(attachmentFile);
-            //byte[] encoded = Base64.getEncoder().encode(bytes);
-            //String encodedString = new String(encoded);
-            //send("Hello",pw);
-            //send(encodedString,pw);
+            // Send docx
+            send("\r\n--" + mimeBoundary,pw);
+            fileName = "docx";
+            send("Content-Type: application/msword; name="+fileName,pw);
+            send("Content-Disposition: attachment;filename=\""+fileName+"\"",pw);
+            send("Content-Transfer-Encoding: base64",pw);
+            byte[] attachment = loadFile(attachmentFile);
+            String encodedAttach = Base64.getEncoder().encodeToString(attachment);
+            send(encodedAttach,pw);
             send("\r\n\r\n--" + mimeBoundary + "--\r\n",pw);
 
 
             send("\r\n.\r\n.",pw);
-            logger.info("" +  br.readLine());
             logger.info("QUEUED " + br.readLine());
             logger.info("" + br.readLine());
             send("QUIT",pw);
