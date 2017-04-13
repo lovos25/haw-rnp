@@ -1,0 +1,14 @@
+#Sender
+rnsose2017@informatik.haw-hamburg.de
+#User
+rnsose2017
+#Password
+Aufgabe1
+#Host
+mailgate.informatik.haw-hamburg.de
+#Port
+465
+#Subject
+Geht endlich
+#Text
+Yay
