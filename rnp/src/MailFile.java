@@ -21,7 +21,7 @@ public class MailFile {
     static Logger logger;
 
     public static void main(String args[]) throws IOException, InterruptedException {
-        if (args.length != 2) throw new IOException("Please enter two arguments, correct syntax is:\njava -cp . MailFile <recipient mail address> <path to attachment file>");
+        //if (args.length != 2) throw new IOException("Please enter two arguments, correct syntax is:\njava -cp . MailFile <recipient mail address> <path to attachment file>");
 
         //Logging
         final boolean LOGGING = true;
@@ -34,14 +34,14 @@ public class MailFile {
         String senderHost = "";
         String senderPort = "";
         // Receiver
-        String receiverEmail = args[0];
+        String receiverEmail = "amanpreet.kaur@haw-hamburg.de";
         // Email content
         String emailSubject = "";
         String emailText = "";
         // Attachment
         String fileName = "Anhang";
-        String attachmentFilePath = args[1];
-        String senderConfigFilePath = "D:\\Git-Repos\\haw-rnp\\rnp\\src\\EmailData.txt";
+        String attachmentFilePath = "/home/students/abv321/TI_Labor/Linux/eclipse_mars/haw-rnp/src/File.txt";
+        String senderConfigFilePath = "/home/students/abv321/TI_Labor/Linux/eclipse_mars/haw-rnp/src/EmailData.txt";
 
         logger.info("Reading data file");
 
@@ -164,36 +164,37 @@ public class MailFile {
             String mimeBoundary = "MimeSeperator";
 
             //Sending -------------------------------------------------------------------
-            logger.info("Initial: " +  br.readLine());
+            //logger.info("Initial: " +  br.readLine());
             send("EHLO " + mailHost.getHostName(), bw);
-            logger.info("\nEHLO " + br.readLine() + "\n" + br.readLine() + "\n" + br.readLine() +
-                    "\n" + br.readLine() + "\n" + br.readLine() + "\n" + br.readLine() +
-                    "\n" + br.readLine() + "\n" + br.readLine() + "\n" + br.readLine());
+            endOfOutput(br,logger);
 
             send("AUTH LOGIN", bw);
             send(senderUsername, bw);
             send(senderPassword, bw);
-            logger.info("AUTH " + br.readLine() + " " + br.readLine());
-            logger.info("SUCCESS? " + br.readLine());
-
+            logger.info("" +  br.readLine());
+            logger.info("" +  br.readLine());
+            
             send("MAIL From:<" + sender + ">", bw);
-            logger.info("From " + br.readLine());
-
+            logger.info("" +  br.readLine());
+            
             send("RCPT TO:<" + receiver + ">", bw);
-            logger.info("RCPT " + br.readLine());
-
+            logger.info("" +  br.readLine());;
+            
             send("DATA", bw);
-            logger.info("" + br.readLine());
+            logger.info("" +  br.readLine());
             send("MIME-Version: 1.0", bw);
+            send("From: " + sender,bw);
+            send("To: " + receiver,bw);
             send("Subject: " + subject, bw);
             send("Content-Type: multipart/mixed; boundary=\"" + mimeBoundary +"\"", bw);
             send("\r\n--" + mimeBoundary, bw);
-
+            logger.info("" +  br.readLine());
+            
             // Send text/body
             send("Content-Type: text/plain\r\n", bw);
             send(text, bw);
             send("\r\n--" + mimeBoundary, bw);
-
+            
             // Send attachment
             File attachmentFile = new File(attachmentFilePath);
             FileDataSource fds = new FileDataSource(new File(attachmentFilePath));
@@ -201,24 +202,23 @@ public class MailFile {
             String mimeType = fds.getContentType();
 
             logger.info("Guessed MimeType: " +  mimeType);
-            send("Content-Type: "+mimeType +"; name="+fileName, bw);
-            send("Content-Disposition: attachment;filename=\""+fileName+"\"", bw);
             send("Content-Transfer-Encoding: base64", bw);
+            send("Content-Type: "+mimeType +"; name="+fileName+".txt", bw);
+            send("Content-Disposition: attachment;filename="+fileName+".txt", bw);
+            send("\n",bw);
             byte[] attachment = loadFile(attachmentFile);
             String doc = Base64.getMimeEncoder().encodeToString(attachment);
             send(doc, bw);
-
-            System.out.println(doc);
-
+            send("\n",bw);
             send("\r\n--" + mimeBoundary + "--\r\n", bw);
 
             //End mail with "." in one line
-            send("\r\n.\r\n.", bw);
+            send("\r\n.", bw);
+            logger.info("" +  br.readLine());
             
-            logger.info("QUEUED " + br.readLine());
-            logger.info("" + br.readLine());
             send("QUIT", bw);
-            logger.info("BYE " + br.readLine());
+            logger.info("" +  br.readLine());
+            
 
             logger.info("Leaving send and closing socket");
             //Closing -------------------------------------------------------------------
@@ -254,6 +254,17 @@ public class MailFile {
             is.close();
             return bytes;
         }
+        
+        private static void endOfOutput(BufferedReader br, Logger logger) throws IOException {
+        	String temp = br.readLine();
+        	String tmp = "";
+        	String endOfEhlo = "-";
+            while(temp.indexOf(endOfEhlo) >= 0){
+            	tmp += temp + "\n";
+            	temp = br.readLine();
+            }
+            logger.info(tmp += temp + "\n");
+        }
     }
 
     private static void enableLogging(boolean enable) {
@@ -263,7 +274,7 @@ public class MailFile {
 
             try {
                 // This block configure the logger with handler and formatter
-                fh = new FileHandler("D:\\Git-Repos\\haw-rnp\\rnp\\src\\SMTPLog.log");
+                fh = new FileHandler("/home/students/abv321/TI_Labor/Linux/eclipse_mars/haw-rnp/src/SMTPLog.log");
                 logger.addHandler(fh);
                 SimpleFormatter formatter = new SimpleFormatter();
                 fh.setFormatter(formatter);
