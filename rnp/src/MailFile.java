@@ -1,19 +1,18 @@
 /**
  * Created by zujiry on 4/10/17.
  */
-import sun.rmi.runtime.Log;
 
-import java.util.Base64;
 import javax.activation.FileDataSource;
 import javax.net.ssl.SSLSocketFactory;
+import java.net.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Base64;
 import java.io.*;
-import java.net.InetAddress;
-import java.net.Socket;
-import java.net.UnknownHostException;
 import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
-
 /**
  * Created by zujiry on 4/3/17.
  */
@@ -22,7 +21,7 @@ public class MailFile {
     static Logger logger;
 
     public static void main(String args[]) throws IOException, InterruptedException {
-        //if (args.length != 2) throw new IOException("Please enter two arguments, correct syntax is:\njava -cp . MailFile <recipient mail address> <path to attachment file>");
+        if (args.length != 2) throw new IOException("Please enter two arguments, correct syntax is:\njava -cp . MailFile <recipient mail address> <path to attachment file>");
 
         //Logging
         final boolean LOGGING = true;
@@ -35,13 +34,13 @@ public class MailFile {
         String senderHost = "";
         String senderPort = "";
         // Receiver
-        String receiverEmail = "till.pohland@haw-hamburg.de";//args[2];
+        String receiverEmail = args[0];
         // Email content
         String emailSubject = "";
         String emailText = "";
         // Attachment
         String fileName = "Anhang";
-        String attachmentFilePath = "D:\\Git-Repos\\haw-rnp\\rnp\\src\\TextFile.docx";
+        String attachmentFilePath = args[1];
         String senderConfigFilePath = "D:\\Git-Repos\\haw-rnp\\rnp\\src\\EmailData.txt";
 
         logger.info("Reading data file");
@@ -90,11 +89,11 @@ public class MailFile {
         //Checking correctness of data from given file
         logger.info("Checking correctness of data");
 
-        if (senderEmail.length() <= 0 || senderUsername.length() <= 0 || senderPassword.length() <= 0 || senderHost.length() <= 0 || senderPort.length() <= 0) {
+        if (senderEmail.length() <= 0 || senderUsername.length() <= 0 || senderPassword.length() <= 0
+                || senderHost.length() <= 0 || senderPort.length() <= 0) {
             throw new IOException("Data given of the sender is incorrect, please validate in the userdata configuration");
         }
 
-        File attachmentFile = new File(attachmentFilePath);
         String senderUsernameB64 = Base64.getEncoder().encodeToString(senderUsername.getBytes());
         String senderPasswordB64 = Base64.getEncoder().encodeToString(senderPassword.getBytes());
 
@@ -106,7 +105,7 @@ public class MailFile {
         logger.info("Is mail null?: " + mailCheck);
 
         if (mail != null){
-            if (mail.send(senderEmail,receiverEmail,emailText, emailSubject, Integer.valueOf(senderPort),senderUsernameB64,senderPasswordB64,fileName,attachmentFile)){
+            if (mail.send(senderEmail,receiverEmail,emailText, emailSubject, Integer.valueOf(senderPort),senderUsernameB64,senderPasswordB64,fileName,attachmentFilePath)){
                 logger.info("Email sent");
             } else {
                 logger.info("Email could not be sent");
@@ -119,7 +118,7 @@ public class MailFile {
         InetAddress mailHost;
         InetAddress localHost;
         BufferedReader br;
-        BufferedWriter pw;
+        BufferedWriter bw;
         Logger logger;
 
         //Constructor
@@ -131,7 +130,8 @@ public class MailFile {
         }
 
         //Sending of the Mail
-        public boolean send(String sender, String receiver, String text, String subject, int senderPort, String senderUsername, String senderPassword, String fileName,File attachmentFile) throws IOException, InterruptedException {
+        public boolean send(String sender, String receiver, String text, String subject, int senderPort, String senderUsername,
+                            String senderPassword, String fileName,String attachmentFilePath) throws IOException, InterruptedException {
             logger.info("Starting socket setup");
             InputStream inputStream;
             OutputStream outputStream;
@@ -159,75 +159,76 @@ public class MailFile {
             inputStream = socket.getInputStream();
             outputStream = socket.getOutputStream();
             br = new BufferedReader(new InputStreamReader(inputStream));
-            pw = new BufferedWriter(new OutputStreamWriter(outputStream));
-            String mimeBoundary = "DataSeperatorString";
+            bw = new BufferedWriter(new OutputStreamWriter(outputStream));
 
-            //Sending
+            String mimeBoundary = "MimeSeperator";
+
+            //Sending -------------------------------------------------------------------
             logger.info("Initial: " +  br.readLine());
-            send("EHLO " + mailHost.getHostName(),pw);
+            send("EHLO " + mailHost.getHostName(), bw);
             logger.info("\nEHLO " + br.readLine() + "\n" + br.readLine() + "\n" + br.readLine() +
                     "\n" + br.readLine() + "\n" + br.readLine() + "\n" + br.readLine() +
                     "\n" + br.readLine() + "\n" + br.readLine() + "\n" + br.readLine());
 
-            send("AUTH LOGIN",pw);
-            send(senderUsername,pw);
-            send(senderPassword,pw);
+            send("AUTH LOGIN", bw);
+            send(senderUsername, bw);
+            send(senderPassword, bw);
             logger.info("AUTH " + br.readLine() + " " + br.readLine());
             logger.info("SUCCESS? " + br.readLine());
 
-            send("MAIL From:<" + sender + ">",pw);
+            send("MAIL From:<" + sender + ">", bw);
             logger.info("From " + br.readLine());
 
-            send("RCPT TO:<" + receiver + ">",pw);
+            send("RCPT TO:<" + receiver + ">", bw);
             logger.info("RCPT " + br.readLine());
 
-            send("DATA",pw);
+            send("DATA", bw);
             logger.info("" + br.readLine());
-            send("MIME-Version: 1.0",pw);
-            send("Subject: " + subject,pw);
-            send("Content-Type: multipart/mixed; boundary=\"" + mimeBoundary +"\"",pw);
-            send("\r\n--" + mimeBoundary,pw);
+            send("MIME-Version: 1.0", bw);
+            send("Subject: " + subject, bw);
+            send("Content-Type: multipart/mixed; boundary=\"" + mimeBoundary +"\"", bw);
+            send("\r\n--" + mimeBoundary, bw);
 
-            send("Content-Type: text/plain\r\n",pw);
-            send(text,pw);
-            send("\r\n\r\n",pw);
-            send("\r\n--" + mimeBoundary,pw);
+            // Send text/body
+            send("Content-Type: text/plain\r\n", bw);
+            send(text, bw);
+            send("\r\n--" + mimeBoundary, bw);
 
-            // Send doc
-            send("Content-Type: text/plain; name="+fileName,pw);
-            send("Content-Disposition: attachment;filename=\""+fileName+"\"",pw);
-            send("Content-Transfer-Encoding: base64",pw);
-            byte[] bytes = loadFile(new File("D:\\Git-Repos\\haw-rnp\\rnp\\src\\File.txt"));
-            String encoded = Base64.getEncoder().encodeToString(bytes);
-            send(encoded,pw);
+            // Send attachment
+            File attachmentFile = new File(attachmentFilePath);
+            FileDataSource fds = new FileDataSource(new File(attachmentFilePath));
+            System.out.println("Content-Type is: "+fds.getContentType());
+            String mimeType = fds.getContentType();
 
-            // Send docx
-            send("\r\n--" + mimeBoundary,pw);
-            fileName = "docx";
-            send("Content-Type: application/msword; name="+fileName,pw);
-            send("Content-Disposition: attachment;filename=\""+fileName+"\"",pw);
-            send("Content-Transfer-Encoding: base64",pw);
+            logger.info("Guessed MimeType: " +  mimeType);
+            send("Content-Type: "+mimeType +"; name="+fileName, bw);
+            send("Content-Disposition: attachment;filename=\""+fileName+"\"", bw);
+            send("Content-Transfer-Encoding: base64", bw);
             byte[] attachment = loadFile(attachmentFile);
-            String encodedAttach = Base64.getEncoder().encodeToString(attachment);
-            send(encodedAttach,pw);
-            send("\r\n\r\n--" + mimeBoundary + "--\r\n",pw);
+            String doc = Base64.getMimeEncoder().encodeToString(attachment);
+            send(doc, bw);
 
+            System.out.println(doc);
 
-            send("\r\n.\r\n.",pw);
+            send("\r\n--" + mimeBoundary + "--\r\n", bw);
+
+            //End mail with "." in one line
+            send("\r\n.\r\n.", bw);
+            
             logger.info("QUEUED " + br.readLine());
             logger.info("" + br.readLine());
-            send("QUIT",pw);
+            send("QUIT", bw);
             logger.info("BYE " + br.readLine());
 
             logger.info("Leaving send and closing socket");
-
+            //Closing -------------------------------------------------------------------
             socket.close();
             return true;
         }
 
-        private void send(String string, BufferedWriter pw) throws IOException {
-            pw.write(string + "\r\n");
-            pw.flush();
+        private void send(String string, BufferedWriter bw) throws IOException {
+            bw.write(string + "\r\n");
+            bw.flush();
         }
 
         private static byte[] loadFile(File file) throws IOException {
@@ -262,7 +263,7 @@ public class MailFile {
 
             try {
                 // This block configure the logger with handler and formatter
-                fh = new FileHandler("/home/zujiry/Documents/EmailLogFile.log");
+                fh = new FileHandler("D:\\Git-Repos\\haw-rnp\\rnp\\src\\SMTPLog.log");
                 logger.addHandler(fh);
                 SimpleFormatter formatter = new SimpleFormatter();
                 fh.setFormatter(formatter);
