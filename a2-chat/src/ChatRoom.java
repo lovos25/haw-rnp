@@ -1,3 +1,5 @@
+package src;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -8,18 +10,22 @@ public class ChatRoom {
 	// Chatroom name
 	private String name;
 	
-	private List<Message> Messages = new ArrayList<Message>();
+	private List<ChatMessage> Messages = new ArrayList<ChatMessage>();
 	
 	
-	public ChatRoom() {
-		
+	public ChatRoom(String name) {
+		this.name = name;
 	}
-	
-	public void sendMessage() {
-		
+
+	public void logMessage(ChatMessage cm){
+		Messages.add(cm);
 	}
-	
-	public void sendMessageToUsers() {
-		
+
+	public String getName() {
+		return name;
 	}
+
+	public String toString(){
+	    return name;
+    }
 }
