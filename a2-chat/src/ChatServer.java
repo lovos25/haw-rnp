@@ -14,8 +14,12 @@ import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 
 public class ChatServer {
+    //TODO: ask for users in chatroom, protocol? (Send all the static things in the beginning)
     public static String GENERAL_CHAT_ROOM = "GENERAL";
     public static int CHATROOM_INDEX_POS = 0;
+    public static String MESSAGE_FROM_OTHER_CLIENT = "##";
+    public static String SERVER_CALL = "################";
+    public static String ERROR = "####";
 
 	// Server status: An oder Aus
 	private boolean serverStatus;
@@ -144,14 +148,14 @@ public class ChatServer {
         ObjectInputStream sInput;
         ObjectOutputStream sOutput;
         ChatMessage cm;
-        ChatRoom chatRoom;
+        String chatRoom;
         String username;
 
         ClientThread(Socket socket) {
-
             // a unique id
             id = ++uniqueId;
             this.socket = socket;
+            this.chatRoom = GENERAL_CHAT_ROOM;
 
             System.out.println("Thread trying to create Object Input/Output Streams");
             try {
@@ -183,7 +187,7 @@ public class ChatServer {
                 }
 
                 String message = cm.getText();
-                String roomName = cm.getChatRoomId();
+                String roomName = cm.getChatRoomName();
                 logger.info(getUsername() + " sent following message: " + message);
 
                 ChatRoom cr = null;
@@ -191,57 +195,49 @@ public class ChatServer {
 
                     // Login to a chatroom
                     case ChatMessage.CHATROOM:
-                        if (roomClientMap.containsKey(roomName)) {
-                            roomClientMap.get(roomName).add(id);
-
-                            if (roomClientMap.containsKey(roomName)) {
-                                cr = roomList.get(roomClientMap.get(roomName).get(CHATROOM_INDEX_POS));
-                                ArrayList<Integer> clientListofRoom = roomClientMap.get(roomName);
-                                int size = clientListofRoom.size();
-
-                                for(int i = 0; i < size; i++){
-                                    long threadId = clientList.get(clientListofRoom.get(i)).getId();
-                                    if(threadId != id && threadId != CHATROOM_INDEX_POS){
-                                        ClientThread ct = clientList.get(clientListofRoom.get(i));
-                                        boolean isMessageSent = ct.sendMessage(getUsername() + " joined the chatroom");
-                                        if(!isMessageSent){
-                                            clientList.remove(ct);
-                                        } else {
-                                            System.out.println("message sent!");
-                                        }
-                                    }
+                        if (roomClientMap.containsKey(message)) {
+                            if(!(roomClientMap.get(message).contains(id))) {
+                                roomClientMap.get(message).add(id);
+                                this.chatRoom = message;
+                                sendMessage("", GENERAL_CHAT_ROOM, ChatMessage.MESSAGE);
+                                List<ChatMessage> messageLog = roomList.get(roomClientMap.get(message).get(CHATROOM_INDEX_POS)).getMessages();
+                                int size = messageLog.size();
+                                for(int i = 0; i < size ; i++){
+                                    sendMessage(messageLog.get(i).getText(),messageLog.get(i).getChatRoomName(),messageLog.get(i).getType());
                                 }
-                                // Adding message to log of chatroom
-                                cr.logMessage(cm);
+                            } else {
+                                sendMessage("Error: Already in chatroom: " + message,chatRoom,ChatMessage.ERROR);
                             }
-                            //TODO: Send log of chatroom to user
+                        }else {
+                            sendMessage("Error: Chatroom " + message + " does not exist",chatRoom,ChatMessage.ERROR);
                         }
                         break;
 
                     // List all the available chatrooms
                     case ChatMessage.LIST_CHATROOMS:
-                        try {
-                            sOutput.writeObject(roomList.toString());
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
+                        sendMessage(roomList.toString(),roomName,ChatMessage.LIST_CHATROOMS);
+                        logger.info("Listed server for " + getUsername());
                         break;
 
                     // Create a chatroom
                     case ChatMessage.CREATE_CHATROOM:
+                        // Creating a new chatroom
+                        for(int i = 0; i < roomList.size(); i++){
+                            if(roomList.get(i).getName().equals(message)){
+                                sendMessage("Room name is already taken, please choose another one",GENERAL_CHAT_ROOM,ChatMessage.ERROR);
+                                break;
+                            }
+                        }
                         cr = new ChatRoom(message);
                         ArrayList users = new ArrayList<Integer>();
                         roomList.add(cr);
                         users.add(roomList.indexOf(cr));
                         users.add(id);
+                        System.out.println("Users size " + users.size());
                         roomClientMap.put(cr.getName(),users);
-
-                        try {
-                            sOutput.writeObject("\nConnected to " + cr.getName());
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-
+                        this.chatRoom = message;
+                        // Answer and logging
+                        sendMessage("\nConnected to chatroom: " + cr.getName(),roomName,ChatMessage.CREATE_CHATROOM);
                         logger.info("Created chatroom: " + cr.getName());
                         break;
 
@@ -252,55 +248,80 @@ public class ChatServer {
                         }
                         break;
 
+                    // Ask for the current chatroom
+                    case ChatMessage.IN_CHATROOM:
+                        sendMessage(chatRoom,GENERAL_CHAT_ROOM,ChatMessage.ERROR);
+                        break;
+
                     // Send message to all users in the chatroom that is specified
                     case ChatMessage.MESSAGE:
-                        cr = null;
                         if(roomName.equals(ChatServer.GENERAL_CHAT_ROOM)){
-                            logger.info("General chat room, no message sent");
+                            sendMessage(message,GENERAL_CHAT_ROOM,ChatMessage.MESSAGE);
                             break;
                         }
                         if (roomClientMap.containsKey(roomName)) {
-                            cr = roomList.get(roomClientMap.get(roomName).get(CHATROOM_INDEX_POS));
                             ArrayList<Integer> clientListofRoom = roomClientMap.get(roomName);
-                            int size = clientListofRoom.size();
+                            int size = clientListofRoom.size()-1;
 
-                            for(int i = 0; i < size; ++i){
-                                System.out.println(clientListofRoom.get(i));
-                                long threadId = clientList.get(clientListofRoom.get(i)-1).getId();
-                                if(threadId != id && threadId != CHATROOM_INDEX_POS){
-                                    ClientThread ct = clientList.get(clientListofRoom.get(i)-1);
-                                    System.out.println("" + ct.getUsername());
-                                    boolean isMessageSent = ct.sendMessage(message);
+                            for(int i = CHATROOM_INDEX_POS; i < size; i++){
+                                int a = i+1;
+                                // -1 because of uniqueId beginning at 1, but we need to start from 0
+                                ClientThread akkuCT = clientList.get(clientListofRoom.get(a)-1);
+                                long threadId = akkuCT.getClientId();
+                                if(threadId != id){
+                                    String send = getUsername() + "|" + roomName + " > " + message;
+                                    boolean isMessageSent = akkuCT.sendMessage(send,roomName,ChatMessage.MESSAGE);
                                     if(!isMessageSent){
-                                        clientList.remove(ct);
+                                        System.out.println("Removing " + getUsername());
+                                        clientList.remove(akkuCT);
                                     } else {
-                                        System.out.println("message sent!");
+                                        cr = roomList.get(roomClientMap.get(roomName).get(CHATROOM_INDEX_POS));
+                                        cr.logMessage(new ChatMessage(send,ChatMessage.MESSAGE,roomName));
+                                        logger.info(getUsername() + " sent a message to " +  roomName);
                                     }
+                                } else {
+                                    sendMessage(message,GENERAL_CHAT_ROOM,ChatMessage.MESSAGE);
                                 }
                             }
-                            // Adding message to log of chatroom
-                            cr.logMessage(cm);
                         }
                         break;
                     // Logout from the server
                     case ChatMessage.LOGOUT:
+                        //TODO: delete the user from all lists and so on
                         running = false;
                         break;
                     case ChatMessage.OTHER_USERS:
-                        try {
-                            sOutput.writeObject(loggedUsers());
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
+                        sendMessage(loggedUsers(),roomName,ChatMessage.OTHER_USERS);
                         break;
                 }
             }
         }
 
-        private boolean sendMessage(String message) {
+        private boolean sendMessage(String message, String room, int type) {
             try {
-                sOutput.writeObject(message);
-                return true;
+                switch (type) {
+                    case ChatMessage.MESSAGE:
+                        if(!(room.equals(GENERAL_CHAT_ROOM))) {
+                            sOutput.writeObject(MESSAGE_FROM_OTHER_CLIENT);
+                            sOutput.writeObject(message);
+                        }
+                        sOutput.writeObject("");
+                        return true;
+                    case ChatMessage.ERROR:
+                        //System.out.println("ERROOOOOOOOOOOR");
+                        sOutput.writeObject(ERROR);
+                        sOutput.writeObject(message);
+                        return true;
+                    case ChatMessage.CREATE_CHATROOM:
+                    case ChatMessage.OTHER_USERS:
+                    case ChatMessage.CHATROOM:
+                    case ChatMessage.LIST_CHATROOMS:
+                    default:
+                        //System.out.println("SERVERCALL");
+                        sOutput.writeObject(SERVER_CALL);
+                        sOutput.writeObject(message);
+                        return true;
+                }
             } catch (IOException e) {
                 e.printStackTrace();
                 return false;

@@ -10,7 +10,7 @@ public class ChatRoom {
 	// Chatroom name
 	private String name;
 	
-	private List<ChatMessage> Messages = new ArrayList<ChatMessage>();
+	private List<ChatMessage> Messages = new ArrayList<ChatMessage>(50);
 	
 	
 	public ChatRoom(String name) {
@@ -23,6 +23,10 @@ public class ChatRoom {
 
 	public String getName() {
 		return name;
+	}
+
+	public List<ChatMessage> getMessages() {
+		return Messages;
 	}
 
 	public String toString(){
