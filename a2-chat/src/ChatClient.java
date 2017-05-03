@@ -3,6 +3,7 @@ package src;
 import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 
 public class ChatClient {
@@ -24,13 +25,14 @@ public class ChatClient {
     ArrayList<Integer> serverList;
     String chatRoom = ChatServer.GENERAL_CHAT_ROOM;
     String oldChatRoom = ChatServer.GENERAL_CHAT_ROOM;
+    boolean runningClient = true;
 
     public ChatClient(){
     }
 
     public void start(){
         Scanner scan = new Scanner(System.in);
-        while(true) {
+        while(runningClient) {
             // read message from user
             String msg = scan.nextLine();
             String roomname = "Empty";
@@ -50,10 +52,10 @@ public class ChatClient {
 	                sendMessage(ChatServer.GENERAL_CHAT_ROOM, "which chatroom am I in?", ChatMessage.USERS_IN_CHATROOM);
 	            	break;
 	            case "LIST_USERS":
-	            	sendMessage(ChatServer.GENERAL_CHAT_ROOM, username + "#" + clientId + " requesting list of users", ChatMessage.OTHER_USERS);
+                    sendMessage(ChatServer.GENERAL_CHAT_ROOM, username + " requesting list of users", ChatMessage.OTHER_USERS);
 	            	break;
 	            case "LIST_CHATROOMS":
-	            	sendMessage(ChatServer.GENERAL_CHAT_ROOM, username + "#" + clientId + " requesting list of chatrooms",ChatMessage.LIST_CHATROOMS);
+	            	sendMessage(ChatServer.GENERAL_CHAT_ROOM, username + " requesting list of chatrooms",ChatMessage.LIST_CHATROOMS);
 	            	break;
 	            case "CREATE_CHATROOM":
 	            	System.out.print("Write down the name for your new chatroom > ");
@@ -78,7 +80,7 @@ public class ChatClient {
 	                } catch (IOException e) {
 	                    e.printStackTrace();
 	                }
-	                sendMessage(ChatServer.GENERAL_CHAT_ROOM, roomname, ChatMessage.CHATROOM);
+	                sendMessage(ChatServer.GENERAL_CHAT_ROOM, roomname, ChatMessage.JOIN_CHATROOM);
 	                oldChatRoom = chatRoom;
 	                chatRoom = roomname;
 	                break;
@@ -152,7 +154,7 @@ public class ChatClient {
         return true;
     }
     private void logout() {
-        if(sInput != null && socket != null ) {
+        if(sOutput != null && socket != null ) {
             sendMessage(ChatServer.GENERAL_CHAT_ROOM, "", ChatMessage.LOGOUT);
         }
 
@@ -170,6 +172,8 @@ public class ChatClient {
             if(socket != null)
                 socket.close();
         } catch(Exception e) {}
+
+        runningClient = false;
     }
 
     private void logoutRoom() {

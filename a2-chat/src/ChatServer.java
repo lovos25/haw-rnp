@@ -318,6 +318,7 @@ public class ChatServer {
                         if (roomClientMap.containsKey(roomName)) {
                             roomClientMap.get(roomName).remove(id);
                         }
+                        chatRoom = GENERAL_CHAT_ROOM;
                         break;
 
                     // Ask for the current chatroom
