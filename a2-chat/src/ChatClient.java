@@ -37,7 +37,10 @@ public class ChatClient {
             String roomname = "Empty";
             
             switch (msg.toUpperCase()) {
-            
+
+                case "HELP_SERVER":
+                    sendMessage(ChatServer.GENERAL_CHAT_ROOM, "Help please", ChatMessage.HELP_SERVER);
+                    break;
 	            case "LOGOUT": // logout if message is LOGOUT
 	            	logout();
 	            	break;
