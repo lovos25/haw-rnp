@@ -2,10 +2,8 @@ package src;
 
 import java.io.*;
 import java.net.Socket;
-import java.sql.Time;
 import java.util.ArrayList;
 import java.util.Scanner;
-import java.util.concurrent.TimeUnit;
 
 public class ChatClient {
     // Messages
@@ -41,8 +39,6 @@ public class ChatClient {
                 break;
             }else if(msg.equalsIgnoreCase(IN_CHATROOM)){
                 sendMessage(ChatServer.GENERAL_CHAT_ROOM,"which chatroom am I in?",ChatMessage.IN_CHATROOM);
-            }else if(msg.equalsIgnoreCase(USERS_IN_CHATROOM)){
-                sendMessage(ChatServer.GENERAL_CHAT_ROOM,"which chatroom am I in?",ChatMessage.USERS_IN_CHATROOM);
             } else if(msg.equalsIgnoreCase(LIST_USERS)){
                 sendMessage(ChatServer.GENERAL_CHAT_ROOM, username + " requesting list of users",ChatMessage.OTHER_USERS);
             } else if(msg.equalsIgnoreCase(LIST_CHATROOMS)) {
@@ -72,11 +68,9 @@ public class ChatClient {
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
-                sendMessage(ChatServer.GENERAL_CHAT_ROOM, roomname, ChatMessage.CHATROOM);
-                if(!oldChatRoom.equals(chatRoom)) {
-                    oldChatRoom = chatRoom;
-                    chatRoom = roomname;
-                }
+                sendMessage(ChatServer.GENERAL_CHAT_ROOM, roomname, ChatMessage.JOIN_CHATROOM);
+                oldChatRoom = chatRoom;
+                chatRoom = roomname;
             } else {
                 sendMessage(chatRoom,msg,ChatMessage.MESSAGE);
             }
@@ -220,7 +214,6 @@ public class ChatClient {
                         error = true;
                         continue;
                     } else {
-                        //System.out.print(username + "|" + chatRoom + " > ");
                     }
                 } catch (IOException e) {
                     e.printStackTrace();

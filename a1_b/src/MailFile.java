@@ -1,4 +1,4 @@
-/**
+package src; /**
  * Created by zujiry on 4/10/17.
  */
 import java.util.Base64;
@@ -44,7 +44,7 @@ public class MailFile {
         logger.info("Starting sending of smtp mail");
         
         
-        SMTP mail = new SMTP(properties.getSenderHost(), logger);
+        Smtp mail = new Smtp(properties.getSenderHost(), logger);
 
         boolean mailCheck = (mail == null);
         logger.info("Is mail null?: " + mailCheck);

@@ -81,6 +81,7 @@ public class ChatServer {
 	 * @throws IOException 
 	 */
 	public void start() {
+	    clientList.add(null);
         serverStatus = true;
 	    try {
             serverSocket = new ServerSocket(port);
@@ -112,7 +113,7 @@ public class ChatServer {
 
             try {
                 serverSocket.close();
-                for (int i = 0; i < clientList.size(); ++i) {
+                for (int i = 1; i < clientList.size(); ++i) {
                     ClientThread tc = clientList.get(i);
                     try {
                         tc.sInput.close();
@@ -136,7 +137,7 @@ public class ChatServer {
 
 	// We want to have a small group of users but the ids always near each other
 	private int getGoodIndex(){
-	    for(int i = 0; i < clientList.size(); i++){
+	    for(int i = 1; i < clientList.size(); i++){
 	        if(clientList.get(i) == null){
 	            return i;
             }
@@ -147,7 +148,7 @@ public class ChatServer {
 	public String loggedUsers() {
 	    String userList = "";
 		int size = clientList.size();
-	    for(int i = 0; i < size; i++){
+	    for(int i = 1; i < size; i++){
 	        userList =  userList + clientList.get(i).getUsername() + "\n";
         }
 	    return userList;
@@ -207,14 +208,14 @@ public class ChatServer {
 
                 String message = cm.getText();
                 String roomName = cm.getChatRoomName();
-                logger(getUsername() + " sent following message: " + message);
+                logger(chatRoom +  ": " + getUsername() + " sent following message: " + message);
                 Integer size = null;
                 ChatRoom cr = null;
                 switch (cm.getType()) {
                     case ChatMessage.INITIALIZE:
                         size = clientList.size();
                         boolean initialized = true;
-                        for(int i = 0; i < size; i++){
+                        for(int i = 1; i < size; i++){
                             if(clientList.get(i).getUsername().equals(message)){
                                 logger("Username already taken");
                                 sendMessage("Username already taken",GENERAL_CHAT_ROOM,ChatMessage.ERR_USERNAME);
@@ -230,24 +231,38 @@ public class ChatServer {
                         }
                         break;
                     case ChatMessage.USERS_IN_CHATROOM:
-                        String users = chatRoom + "\n";
+                        String users = "Chatroom " + chatRoom + ":\n";
                         if(chatRoom.equals(GENERAL_CHAT_ROOM)){
                             sendMessage(loggedUsers(),chatRoom,ChatMessage.USERS_IN_CHATROOM);
                             break;
                         }
+
                         ArrayList<Integer> clientsInChat = roomClientMap.get(chatRoom);
-                        for(int i = 0; i < clientsInChat.size(); i++){
-                            users += (clientList.get(clientsInChat.get(i)-1).getUsername()) + "\n";
+                        for(int i = 1; i < clientsInChat.size(); i++){
+                            if(clientList.get(clientsInChat.get(i)) != null) users += (clientList.get(clientsInChat.get(i)).getUsername()) + "\n";
                         }
                         sendMessage(users,chatRoom,ChatMessage.USERS_IN_CHATROOM);
+                        break;
 
                     // Login to a chatroom
-                    case ChatMessage.CHATROOM:
+                    case ChatMessage.JOIN_CHATROOM:
+                        System.out.println("Join " + message);
                         if (roomClientMap.containsKey(message)) {
-                            if(!(roomClientMap.get(message).contains(id))) {
+                            boolean idInMap = false;
+                            size = roomClientMap.size();
+                            ArrayList<Integer> userList = roomClientMap.get(message);
+                            System.out.println(userList.size());
+                            for(int i = 1; i < size ; i++){
+                                if(userList.get(i).equals(id)){
+                                    idInMap = true;
+                                    break;
+                                }
+                            }
+                            System.out.println(idInMap);
+                            if(!idInMap) {
                                 roomClientMap.get(message).add(id);
                                 this.chatRoom = message;
-                                sendMessage("", GENERAL_CHAT_ROOM, ChatMessage.MESSAGE);
+                                sendMessage("Joined chatroom " + chatRoom, chatRoom, ChatMessage.MESSAGE);
                                 List<ChatMessage> messageLog = roomList.get(roomClientMap.get(message).get(CHATROOM_INDEX_POS)).getMessages();
                                 size = messageLog.size();
                                 for(int i = 0; i < size ; i++){
@@ -273,6 +288,7 @@ public class ChatServer {
                         for(int i = 0; i < roomList.size(); i++){
                             if(roomList.get(i).getName().equals(message)){
                                 sendMessage("Room name is already taken, please choose another one",GENERAL_CHAT_ROOM,ChatMessage.ERROR);
+                                //TODO: break just out of for, but has to break through switch
                                 break;
                             }
                         }
@@ -281,8 +297,14 @@ public class ChatServer {
                         roomList.add(cr);
                         usersArray.add(roomList.indexOf(cr));
                         usersArray.add(id);
-                        System.out.println("Users size " + usersArray.size());
                         roomClientMap.put(cr.getName(),usersArray);
+                        System.out.println(chatRoom);
+                        if (!(chatRoom.equals(GENERAL_CHAT_ROOM)) && roomClientMap.containsKey(chatRoom)) {
+                            System.out.println(chatRoom);
+                            System.out.println(roomClientMap.get(chatRoom).contains(id));
+                            roomClientMap.get(chatRoom).remove(id);
+                            System.out.println(roomClientMap.get(chatRoom).contains(id));
+                        }
                         this.chatRoom = message;
                         // Answer and logging
                         sendMessage("\nConnected to chatroom: " + cr.getName(),roomName,ChatMessage.CREATE_CHATROOM);
@@ -298,7 +320,7 @@ public class ChatServer {
 
                     // Ask for the current chatroom
                     case ChatMessage.IN_CHATROOM:
-                        sendMessage(chatRoom,GENERAL_CHAT_ROOM,ChatMessage.MESSAGE);
+                        sendMessage(chatRoom,GENERAL_CHAT_ROOM,ChatMessage.JOIN_CHATROOM);
                         break;
 
                     // Send message to all users in the chatroom that is specified
@@ -306,8 +328,7 @@ public class ChatServer {
                         if(roomName.equals(ChatServer.GENERAL_CHAT_ROOM)){
                             sendMessage(message,GENERAL_CHAT_ROOM,ChatMessage.MESSAGE);
                             break;
-                        }
-                        if (roomClientMap.containsKey(roomName)) {
+                        } else if (roomClientMap.containsKey(roomName)) {
                             ArrayList<Integer> clientListofRoom = roomClientMap.get(roomName);
                             // -1 because of the chatroomindex
                             size = clientListofRoom.size()-1;
@@ -321,15 +342,20 @@ public class ChatServer {
                                     String send = getUsername() + "|" + roomName + " > " + message;
                                     boolean isMessageSent = akkuCT.sendMessage(send,roomName,ChatMessage.MESSAGE);
                                     if(!isMessageSent){
+                                        logger("Removing ClientThread, message could not be sent");
                                         //TODO: sinnvolle reaktion?
                                         clientList.remove(akkuCT);
                                     } else {
                                         cr = roomList.get(roomClientMap.get(roomName).get(CHATROOM_INDEX_POS));
                                         cr.logMessage(new ChatMessage(send,ChatMessage.MESSAGE,roomName));
-                                        logger.info(getUsername() + " sent a message to " +  roomName);
+                                        logger("Logged message to chatroom " + cr.getName());
                                     }
                                 } else {
+                                    String send = getUsername() + "|" + roomName + " > " + message;
                                     sendMessage(message,GENERAL_CHAT_ROOM,ChatMessage.MESSAGE);
+                                    cr = roomList.get(roomClientMap.get(roomName).get(CHATROOM_INDEX_POS));
+                                    cr.logMessage(new ChatMessage(send,ChatMessage.MESSAGE,roomName));
+                                    logger("Logged message to chatroom " + cr.getName());
                                 }
                             }
                         }
@@ -349,7 +375,7 @@ public class ChatServer {
         }
 
         private boolean sendMessage(String message, String room, int type) {
-            logger("Sending message");
+            logger(getUsername() + " sending message");
             try {
                 switch (type) {
                     case ChatMessage.MESSAGE:
@@ -371,7 +397,7 @@ public class ChatServer {
                         break;
                     case ChatMessage.CREATE_CHATROOM:
                     case ChatMessage.OTHER_USERS:
-                    case ChatMessage.CHATROOM:
+                    case ChatMessage.JOIN_CHATROOM:
                     case ChatMessage.LIST_CHATROOMS:
                     default:
                         //System.out.println("SERVERCALL");

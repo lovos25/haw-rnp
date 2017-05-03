@@ -1,3 +1,5 @@
+package src;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -13,14 +15,14 @@ import java.util.logging.Logger;
 import javax.net.ssl.SSLSocketFactory;
 
 //SMTP class to send data
-class SMTP {
+class Smtp {
 	InetAddress mailHost;
 	InetAddress localHost;
 	BufferedReader br;
 	PrintWriter pw;
 	Logger logger;
 
-	public SMTP(String senderHost, Logger logger) throws UnknownHostException {
+	public Smtp(String senderHost, Logger logger) throws UnknownHostException {
 		mailHost = InetAddress.getByName(senderHost);
 		localHost = InetAddress.getLocalHost();
 		this.logger = logger;
