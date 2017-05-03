@@ -10,6 +10,7 @@ import java.util.concurrent.TimeUnit;
 public class ChatClient {
     // Messages
     public static String LOGOUT = "LOGOUT";
+    public static String LOGOUT_ROOM = "LOGOUT_ROOM";
     public static String LIST_CHATROOMS = "CHATROOMS";
     public static String LIST_USERS = "USERS";
     public static String CREATE_CHATROOM = "CREATE";
@@ -164,10 +165,20 @@ public class ChatClient {
         try{
             if(socket != null)
                 socket.close();
-        }
-        catch(Exception e) {}
+        } catch(Exception e) {}
     }
 
+    private void logoutRoom() {
+    	chatRoom = ChatServer.GENERAL_CHAT_ROOM;
+    	boolean msg = sendMessage(ChatServer.GENERAL_CHAT_ROOM, "", ChatMessage.CHATROOM_LOGOUT);
+    	
+    	if(msg) {
+    		System.out.println("Logout war Erfolgreich");
+    	} else {
+    		System.out.println("Logout war nicht Erfolgreich");
+    	}
+    }
+    
     public boolean sendMessage(String chatRoom, String messageText, int type){
         ChatMessage cm = new ChatMessage(messageText,type,chatRoom);
 
@@ -217,6 +228,9 @@ public class ChatClient {
                         serverCall = true;
                         continue;
                     } else if (msg.equals(ChatServer.ERROR)){
+                        error = true;
+                        continue;
+                    } else if (msg.equals(ChatServer.CHATROOM_LOGOUT)){
                         error = true;
                         continue;
                     } else {

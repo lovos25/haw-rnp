@@ -24,6 +24,8 @@ public class ChatServer {
     public static String SERVER_CALL = "################";
     public static String ERROR = "####";
     public static String ERR_USERNAME = "#####";
+    public static String CHATROOM_LOGOUT = "#####";
+    
     // First initialization of user
     public static String STANDARD_USER = "STANDARD_USER";
 
