@@ -9,8 +9,8 @@ public class ChatMessage implements Serializable{
 
 	// Nachricht
 	private int type;
-	public static final int LOGOUT = 0, MESSAGE = 1, OTHER_USERS = 2, JOIN_CHATROOM = 3, LIST_CHATROOMS = 4, CHATROOM_LOGOUT = 5,
-			CREATE_CHATROOM = 6, ERROR = 7, IN_CHATROOM = 8,USERS_IN_CHATROOM = 9, ERR_USERNAME = 10, INITIALIZE = 11;
+	public static final int LOGOUT = 0, MESSAGE = 1, LIST_USERS = 2, JOIN_CHATROOM = 3, LIST_CHATROOMS = 4, CHATROOM_LOGOUT = 5,
+			CREATE_CHATROOM = 6, ERROR = 7, IN_CHATROOM = 8,USERS_IN_CHATROOM = 9, ERR_USERNAME = 10, INITIALIZE = 11, HELP_SERVER = 12;
 	private String text;
 	private String chatRoomId;
 	

@@ -3,7 +3,6 @@ package src;
 import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Scanner;
 
 public class ChatClient {
@@ -52,7 +51,7 @@ public class ChatClient {
 	                sendMessage(ChatServer.GENERAL_CHAT_ROOM, "which chatroom am I in?", ChatMessage.USERS_IN_CHATROOM);
 	            	break;
 	            case "LIST_USERS":
-                    sendMessage(ChatServer.GENERAL_CHAT_ROOM, username + " requesting list of users", ChatMessage.OTHER_USERS);
+                    sendMessage(ChatServer.GENERAL_CHAT_ROOM, username + " requesting list of users", ChatMessage.LIST_USERS);
 	            	break;
 	            case "LIST_CHATROOMS":
 	            	sendMessage(ChatServer.GENERAL_CHAT_ROOM, username + " requesting list of chatrooms",ChatMessage.LIST_CHATROOMS);

@@ -137,6 +137,18 @@ public class ChatServer {
 
 	}
 
+	public String help(){
+	    String help = "help_server: show this help\n" +
+                "logout: Logout from the server\n" +
+                "logout_room: Logout from current chatroom to General\n" +
+                "in_chatroom: Show in which chatroom you are currently in\n" +
+                "users_in_chatroom: list all users in current chatroom\n" +
+                "list_users: list all users on the server\n" +
+                "list_chatrooms: list all chatrooms on the server\ncreate_chatroom: create chatroom with given name\n" +
+                "join: join given chatroom";
+	    return help;
+    }
+
 	// We want to have a small group of users but the ids always near each other
 	private int getGoodIndex(){
 	    for(int i = 1; i < clientList.size(); i++){
@@ -232,6 +244,8 @@ public class ChatServer {
                             break;
                         }
                         break;
+                    case ChatMessage.HELP_SERVER:
+                        sendMessage(help(),chatRoom,ChatMessage.HELP_SERVER);
                     case ChatMessage.USERS_IN_CHATROOM:
                         String users = "Chatroom " + chatRoom + ":\n";
                         if(chatRoom.equals(GENERAL_CHAT_ROOM)){
@@ -370,15 +384,14 @@ public class ChatServer {
                         roomClientMap.get(chatRoom).remove(index);
                         running = false;
                         break;
-                    case ChatMessage.OTHER_USERS:
-                        sendMessage(loggedUsers(),roomName,ChatMessage.OTHER_USERS);
+                    case ChatMessage.LIST_USERS:
+                        sendMessage(loggedUsers(),roomName,ChatMessage.LIST_USERS);
                         break;
                 }
             }
         }
 
         private boolean sendMessage(String message, String room, int type) {
-            logger(getUsername() + " sending message");
             try {
                 switch (type) {
                     case ChatMessage.MESSAGE:
@@ -399,7 +412,7 @@ public class ChatServer {
                         sOutput.writeObject(message);
                         break;
                     case ChatMessage.CREATE_CHATROOM:
-                    case ChatMessage.OTHER_USERS:
+                    case ChatMessage.LIST_USERS:
                     case ChatMessage.JOIN_CHATROOM:
                     case ChatMessage.LIST_CHATROOMS:
                     default:
