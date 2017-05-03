@@ -75,7 +75,7 @@ public class ChatClient {
 	                }
 	                break;
 	            case "JOIN":
-	            	System.out.print("Which clubroom do you want to join? > ");
+	            	System.out.print("Which chatroom do you want to join? > ");
 	                BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
 	                try {
 	                    roomname = reader.readLine();
@@ -227,7 +227,7 @@ public class ChatClient {
                         serverCall = false;
                     }else if(username_error) {
                         System.out.println(msg);
-                        serverCall = false;
+                        username_error = false;
                     } else if(msg.equals(ChatServer.ERR_USERNAME)) {
                         username_error = true;
                         continue;
@@ -251,10 +251,6 @@ public class ChatClient {
                     e.printStackTrace();
                 }
             }
-        }
-
-        public void setRunning(boolean running) {
-            this.running = running;
         }
     }
 

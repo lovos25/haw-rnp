@@ -59,7 +59,7 @@ public class ChatServer {
 
 	    ChatRoom generalChatRoom = new ChatRoom("General Chatroom");
         this.roomList.add(generalChatRoom);
-        System.out.println("Created Server");
+        logger("Created Server");
         this.start();
 	}
 
@@ -138,7 +138,8 @@ public class ChatServer {
 	}
 
 	public String help(){
-	    String help = "help_server: show this help\n" +
+	    String help = "########     help_server:    ##########\n" +
+                "show this help\n" +
                 "logout: Logout from the server\n" +
                 "logout_room: Logout from current chatroom to General\n" +
                 "in_chatroom: Show in which chatroom you are currently in\n" +
@@ -189,7 +190,7 @@ public class ChatServer {
             id = index;
             this.socket = socket;
             this.chatRoom = GENERAL_CHAT_ROOM;
-            System.out.println("Thread trying to create Object Input/Output Streams");
+            logger("Thread trying to create Object Input/Output Streams");
             try {
                 sOutput = new ObjectOutputStream(socket.getOutputStream());
                 sInput = new ObjectInputStream(socket.getInputStream());
@@ -214,9 +215,12 @@ public class ChatServer {
                 try {
                     cm = (ChatMessage) sInput.readObject();
                 } catch (IOException e) {
+                    logger("ClientThread " + getUsername() + " closed");
+                    //TODO: Delete everything from clienthtread
                     e.printStackTrace();
                     break;
                 } catch (ClassNotFoundException e) {
+                    logger("ClientThread " + getUsername() + " closed");
                     e.printStackTrace();
                 }
 
@@ -246,6 +250,7 @@ public class ChatServer {
                         break;
                     case ChatMessage.HELP_SERVER:
                         sendMessage(help(),chatRoom,ChatMessage.HELP_SERVER);
+                        break;
                     case ChatMessage.USERS_IN_CHATROOM:
                         String users = "Chatroom " + chatRoom + ":\n";
                         if(chatRoom.equals(GENERAL_CHAT_ROOM)){
@@ -262,12 +267,10 @@ public class ChatServer {
 
                     // Login to a chatroom
                     case ChatMessage.JOIN_CHATROOM:
-                        System.out.println("Join " + message);
                         if (roomClientMap.containsKey(message)) {
                             boolean idInMap = false;
-                            size = roomClientMap.size();
                             ArrayList<Integer> userList = roomClientMap.get(message);
-                            System.out.println(userList.size());
+                            size = userList.size();
                             for(int i = 1; i < size ; i++){
                                 if(userList.get(i).equals(id)){
                                     idInMap = true;
@@ -314,12 +317,8 @@ public class ChatServer {
                         usersArray.add(roomList.indexOf(cr));
                         usersArray.add(id);
                         roomClientMap.put(cr.getName(),usersArray);
-                        System.out.println(chatRoom);
                         if (!(chatRoom.equals(GENERAL_CHAT_ROOM)) && roomClientMap.containsKey(chatRoom)) {
-                            System.out.println(chatRoom);
-                            System.out.println(roomClientMap.get(chatRoom).contains(id));
                             roomClientMap.get(chatRoom).remove(id);
-                            System.out.println(roomClientMap.get(chatRoom).contains(id));
                         }
                         this.chatRoom = message;
                         // Answer and logging
@@ -363,18 +362,15 @@ public class ChatServer {
                                         //TODO: sinnvolle reaktion?
                                         clientList.remove(akkuCT);
                                     } else {
-                                        cr = roomList.get(roomClientMap.get(roomName).get(CHATROOM_INDEX_POS));
-                                        cr.logMessage(new ChatMessage(send,ChatMessage.MESSAGE,roomName));
-                                        logger("Logged message to chatroom " + cr.getName());
                                     }
                                 } else {
-                                    String send = getUsername() + "|" + roomName + " > " + message;
                                     sendMessage(message,GENERAL_CHAT_ROOM,ChatMessage.MESSAGE);
-                                    cr = roomList.get(roomClientMap.get(roomName).get(CHATROOM_INDEX_POS));
-                                    cr.logMessage(new ChatMessage(send,ChatMessage.MESSAGE,roomName));
-                                    logger("Logged message to chatroom " + cr.getName());
                                 }
                             }
+                            String send = getUsername() + "|" + roomName + " > " + message;
+                            cr = roomList.get(roomClientMap.get(roomName).get(CHATROOM_INDEX_POS));
+                            cr.logMessage(new ChatMessage(send,ChatMessage.MESSAGE,roomName));
+                            logger("Logged message to chatroom " + cr.getName());
                         }
                         break;
                     // Logout from the server
@@ -407,7 +403,6 @@ public class ChatServer {
                         sOutput.writeObject(message);
                         break;
                     case ChatMessage.ERROR:
-                        //System.out.println("ERROOOOOOOOOOOR");
                         sOutput.writeObject(ERROR);
                         sOutput.writeObject(message);
                         break;
@@ -416,7 +411,6 @@ public class ChatServer {
                     case ChatMessage.JOIN_CHATROOM:
                     case ChatMessage.LIST_CHATROOMS:
                     default:
-                        //System.out.println("SERVERCALL");
                         sOutput.writeObject(SERVER_CALL);
                         sOutput.writeObject(message);
 
