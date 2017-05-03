@@ -8,6 +8,7 @@ import java.util.Scanner;
 public class ChatClient {
     // Messages
     public static String LOGOUT = "LOGOUT";
+    public static String LOGOUT_ROOM = "LOGOUT_ROOM";
     public static String LIST_CHATROOMS = "CHATROOMS";
     public static String LIST_USERS = "USERS";
     public static String CREATE_CHATROOM = "CREATE";
@@ -32,51 +33,61 @@ public class ChatClient {
         while(true) {
             // read message from user
             String msg = scan.nextLine();
-
-            // logout if message is LOGOUT
-            if(msg.equalsIgnoreCase(LOGOUT)) {
-                logout();
-                break;
-            }else if(msg.equalsIgnoreCase(IN_CHATROOM)){
-                sendMessage(ChatServer.GENERAL_CHAT_ROOM,"which chatroom am I in?",ChatMessage.IN_CHATROOM);
-            } else if(msg.equalsIgnoreCase(LIST_USERS)){
-                sendMessage(ChatServer.GENERAL_CHAT_ROOM, username + " requesting list of users",ChatMessage.OTHER_USERS);
-            } else if(msg.equalsIgnoreCase(LIST_CHATROOMS)) {
-                sendMessage(ChatServer.GENERAL_CHAT_ROOM, username + " requesting list of chatrooms",ChatMessage.LIST_CHATROOMS);
-            } else if(msg.equalsIgnoreCase(USERS_IN_CHATROOM)) {
-                sendMessage(ChatServer.GENERAL_CHAT_ROOM, username + " requesting list of users in current chatroom",ChatMessage.USERS_IN_CHATROOM);
-            } else if(msg.equalsIgnoreCase(CREATE_CHATROOM)) {
-                System.out.print("Write down the name for your new chatroom > ");
-                BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-                String roomname = "Empty";
-                try {
-                    roomname = br.readLine();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                // Set roomname if message could be sent
-                if (sendMessage(ChatServer.GENERAL_CHAT_ROOM,roomname,ChatMessage.CREATE_CHATROOM)) {
-                    oldChatRoom = chatRoom;
-                    chatRoom = roomname;
-                }
-            } else if(msg.equalsIgnoreCase(JOIN)){
-                System.out.print("Which clubroom do you want to join? > ");
-                BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-                String roomname = "";
-                try {
-                    roomname = br.readLine();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                sendMessage(ChatServer.GENERAL_CHAT_ROOM, roomname, ChatMessage.JOIN_CHATROOM);
-                oldChatRoom = chatRoom;
-                chatRoom = roomname;
-            } else {
-                sendMessage(chatRoom,msg,ChatMessage.MESSAGE);
+            String roomname = "Empty";
+            
+            switch (msg.toUpperCase()) {
+            
+	            case "LOGOUT": // logout if message is LOGOUT
+	            	logout();
+	            	break;
+	            case "LOGOUT_ROOM": // logout if message is LOGOUT
+	            	logoutRoom();
+	            	break;
+	            case "IN_CHATROOM": 
+	            	sendMessage(ChatServer.GENERAL_CHAT_ROOM, "which chatroom am I in?", ChatMessage.IN_CHATROOM);
+	            	break;
+	            case "USERS_IN_CHATROOM": 
+	                sendMessage(ChatServer.GENERAL_CHAT_ROOM, "which chatroom am I in?", ChatMessage.USERS_IN_CHATROOM);
+	            	break;
+	            case "LIST_USERS":
+	            	sendMessage(ChatServer.GENERAL_CHAT_ROOM, username + "#" + clientId + " requesting list of users", ChatMessage.OTHER_USERS);
+	            	break;
+	            case "LIST_CHATROOMS":
+	            	sendMessage(ChatServer.GENERAL_CHAT_ROOM, username + "#" + clientId + " requesting list of chatrooms",ChatMessage.LIST_CHATROOMS);
+	            	break;
+	            case "CREATE_CHATROOM":
+	            	System.out.print("Write down the name for your new chatroom > ");
+	                BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+	                
+	                try {
+	                    roomname = br.readLine();
+	                } catch (IOException e) {
+	                    e.printStackTrace();
+	                }
+	                // Set roomname if message could be sent
+	                if (sendMessage(ChatServer.GENERAL_CHAT_ROOM,roomname,ChatMessage.CREATE_CHATROOM)) {
+	                    oldChatRoom = chatRoom;
+	                    chatRoom = roomname;
+	                }
+	                break;
+	            case "JOIN":
+	            	System.out.print("Which clubroom do you want to join? > ");
+	                BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+	                try {
+	                    roomname = reader.readLine();
+	                } catch (IOException e) {
+	                    e.printStackTrace();
+	                }
+	                sendMessage(ChatServer.GENERAL_CHAT_ROOM, roomname, ChatMessage.CHATROOM);
+	                oldChatRoom = chatRoom;
+	                chatRoom = roomname;
+	                break;
+	            default:
+	            	sendMessage(chatRoom,msg,ChatMessage.MESSAGE);
+	            	break;
             }
+
         }
-        // done disconnect
-        logout();
     }
 
     public boolean login(String server, int serverPort){
@@ -158,10 +169,20 @@ public class ChatClient {
         try{
             if(socket != null)
                 socket.close();
-        }
-        catch(Exception e) {}
+        } catch(Exception e) {}
     }
 
+    private void logoutRoom() {
+    	chatRoom = ChatServer.GENERAL_CHAT_ROOM;
+    	boolean msg = sendMessage(ChatServer.GENERAL_CHAT_ROOM, "", ChatMessage.CHATROOM_LOGOUT);
+    	
+    	if(msg) {
+    		System.out.println("Logout war Erfolgreich");
+    	} else {
+    		System.out.println("Logout war nicht Erfolgreich");
+    	}
+    }
+    
     public boolean sendMessage(String chatRoom, String messageText, int type){
         ChatMessage cm = new ChatMessage(messageText,type,chatRoom);
 
@@ -211,6 +232,9 @@ public class ChatClient {
                         serverCall = true;
                         continue;
                     } else if (msg.equals(ChatServer.ERROR)){
+                        error = true;
+                        continue;
+                    } else if (msg.equals(ChatServer.CHATROOM_LOGOUT)){
                         error = true;
                         continue;
                     } else {
