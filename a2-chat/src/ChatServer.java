@@ -15,19 +15,23 @@ import java.util.logging.SimpleFormatter;
 
 public class ChatServer {
     //TODO: ask for users in chatroom, protocol? (Send all the static things in the beginning)
+    // Base chatroom
     public static String GENERAL_CHAT_ROOM = "GENERAL";
+    // The index on which the chatroom  index is saved inside the Integer array of the roomClientMap
     public static int CHATROOM_INDEX_POS = 0;
+    // Message types for the clients
     public static String MESSAGE_FROM_OTHER_CLIENT = "##";
     public static String SERVER_CALL = "################";
     public static String ERROR = "####";
     public static String ERR_USERNAME = "#####";
+    // First initialization of user
     public static String STANDARD_USER = "STANDARD_USER";
 
 	// Server status: An oder Aus
 	private boolean serverStatus;
 
 	// Server status: An oder Aus
-	private List<ChatRoom> roomList = new ArrayList<ChatRoom>();
+	private List<ChatRoom> roomList = new ArrayList<>();
 
 	private HashMap<String,ArrayList<Integer>> roomClientMap = new HashMap<>();
 
@@ -48,7 +52,6 @@ public class ChatServer {
 
     // Constructor
 	public ChatServer(int port) {
-	    uniqueId = 0;
 	    this.port = port;
         logging();
 
@@ -205,31 +208,27 @@ public class ChatServer {
                 String message = cm.getText();
                 String roomName = cm.getChatRoomName();
                 logger(getUsername() + " sent following message: " + message);
-
+                Integer size = null;
                 ChatRoom cr = null;
                 switch (cm.getType()) {
                     case ChatMessage.INITIALIZE:
-                        while(true) {
-                            try {
-                                int size = clientList.size();
-                                for(int i = 0; i < size; i++){
-                                    if(clientList.get(i).getUsername().equals(message)){
-                                        logger("Username already taken");
-                                        sendMessage("Username already taken",GENERAL_CHAT_ROOM,ChatMessage.ERR_USERNAME);
-                                        ChatMessage msg =(ChatMessage) sInput.readObject();
-                                        message = msg.getText();
-                                        continue;
-                                    }
-                                }
-                                username = message;
-                                logger(getUsername() + " logged successfully in");
+                        size = clientList.size();
+                        boolean initialized = true;
+                        for(int i = 0; i < size; i++){
+                            if(clientList.get(i).getUsername().equals(message)){
+                                logger("Username already taken");
+                                sendMessage("Username already taken",GENERAL_CHAT_ROOM,ChatMessage.ERR_USERNAME);
+                                initialized = false;
                                 break;
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            } catch (ClassNotFoundException e) {
-                                e.printStackTrace();
                             }
                         }
+                        if(initialized) {
+                            username = message;
+                            sendMessage("Login successful", GENERAL_CHAT_ROOM, ChatMessage.MESSAGE);
+                            logger(getUsername() + " logged successfully in");
+                            break;
+                        }
+                        break;
                     case ChatMessage.USERS_IN_CHATROOM:
                         String users = chatRoom + "\n";
                         if(chatRoom.equals(GENERAL_CHAT_ROOM)){
@@ -250,7 +249,7 @@ public class ChatServer {
                                 this.chatRoom = message;
                                 sendMessage("", GENERAL_CHAT_ROOM, ChatMessage.MESSAGE);
                                 List<ChatMessage> messageLog = roomList.get(roomClientMap.get(message).get(CHATROOM_INDEX_POS)).getMessages();
-                                int size = messageLog.size();
+                                size = messageLog.size();
                                 for(int i = 0; i < size ; i++){
                                     sendMessage(messageLog.get(i).getText(),messageLog.get(i).getChatRoomName(),messageLog.get(i).getType());
                                 }
@@ -299,7 +298,7 @@ public class ChatServer {
 
                     // Ask for the current chatroom
                     case ChatMessage.IN_CHATROOM:
-                        sendMessage(chatRoom,GENERAL_CHAT_ROOM,ChatMessage.ERROR);
+                        sendMessage(chatRoom,GENERAL_CHAT_ROOM,ChatMessage.MESSAGE);
                         break;
 
                     // Send message to all users in the chatroom that is specified
@@ -311,7 +310,7 @@ public class ChatServer {
                         if (roomClientMap.containsKey(roomName)) {
                             ArrayList<Integer> clientListofRoom = roomClientMap.get(roomName);
                             // -1 because of the chatroomindex
-                            int size = clientListofRoom.size()-1;
+                            size = clientListofRoom.size()-1;
 
                             for(int i = 0; i < size; i++){
                                 int a = i+1;
@@ -359,17 +358,17 @@ public class ChatServer {
                             sOutput.writeObject(message);
                         }
                         sOutput.writeObject("");
-                        return true;
+                        break;
                     case ChatMessage.ERR_USERNAME:
                         logger("Already used username");
                         sOutput.writeObject(ERR_USERNAME);
                         sOutput.writeObject(message);
-                        return true;
+                        break;
                     case ChatMessage.ERROR:
                         //System.out.println("ERROOOOOOOOOOOR");
                         sOutput.writeObject(ERROR);
                         sOutput.writeObject(message);
-                        return true;
+                        break;
                     case ChatMessage.CREATE_CHATROOM:
                     case ChatMessage.OTHER_USERS:
                     case ChatMessage.CHATROOM:
@@ -378,12 +377,13 @@ public class ChatServer {
                         //System.out.println("SERVERCALL");
                         sOutput.writeObject(SERVER_CALL);
                         sOutput.writeObject(message);
-                        return true;
+
                 }
             } catch (IOException e) {
                 e.printStackTrace();
                 return false;
             }
+            return true;
         }
 
         public int getClientId() {

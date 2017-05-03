@@ -73,13 +73,12 @@ public class ChatClient {
                     e.printStackTrace();
                 }
                 sendMessage(ChatServer.GENERAL_CHAT_ROOM, roomname, ChatMessage.CHATROOM);
-                oldChatRoom = chatRoom;
-                chatRoom = roomname;
-                System.out.println(chatRoom);
-                System.out.println(oldChatRoom);
+                if(!oldChatRoom.equals(chatRoom)) {
+                    oldChatRoom = chatRoom;
+                    chatRoom = roomname;
+                }
             } else {
                 sendMessage(chatRoom,msg,ChatMessage.MESSAGE);
-                System.out.println(chatRoom);
             }
         }
         // done disconnect
@@ -120,17 +119,19 @@ public class ChatClient {
 
     private boolean username(){
         try {
+            System.out.print("Username > ");
+            BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+            username = br.readLine();
+            sendMessage(ChatServer.GENERAL_CHAT_ROOM,ChatServer.STANDARD_USER,ChatMessage.INITIALIZE);
             while(true) {
-                System.out.print("Username > ");
-                BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-                username = br.readLine();
-                sendMessage(ChatServer.GENERAL_CHAT_ROOM,ChatServer.STANDARD_USER,ChatMessage.INITIALIZE);
                 sendMessage(ChatServer.GENERAL_CHAT_ROOM,username,ChatMessage.INITIALIZE);
                 // Check if username has been taken already
                 String taken = (String) sInput.readObject();
                 if (taken.equals(ChatServer.ERR_USERNAME)){
                     taken = (String) sInput.readObject();
                     System.out.println(taken);
+                    System.out.print("Username > ");
+                    username = br.readLine();
                 } else {
                     System.out.println("@Username saved and logged in");
                     break;
@@ -197,7 +198,6 @@ public class ChatClient {
                         //TODO: Correct output when joining a nonexistent chatroom
                         System.out.println(msg);
                         chatRoom = oldChatRoom;
-                        System.out.println("Error " + chatRoom);
                         //System.out.print(username + "|" + chatRoom + " > ");
                         error = false;
                     }else if(serverCall) {
@@ -217,7 +217,7 @@ public class ChatClient {
                         serverCall = true;
                         continue;
                     } else if (msg.equals(ChatServer.ERROR)){
-                        serverCall = true;
+                        error = true;
                         continue;
                     } else {
                         //System.out.print(username + "|" + chatRoom + " > ");
