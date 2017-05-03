@@ -20,6 +20,8 @@ public class ChatServer {
     public static String MESSAGE_FROM_OTHER_CLIENT = "##";
     public static String SERVER_CALL = "################";
     public static String ERROR = "####";
+    public static String ERR_USERNAME = "#####";
+    public static String STANDARD_USER = "STANDARD_USER";
 
 	// Server status: An oder Aus
 	private boolean serverStatus;
@@ -79,31 +81,32 @@ public class ChatServer {
         serverStatus = true;
 	    try {
             serverSocket = new ServerSocket(port);
-
+            logger.info("Server ist auf dem Port " + port + " gestartet");
             while (serverStatus) {
-                logger.info("Server ist auf dem Port " + port + " gestartet");
 
                 // Lauscht auf eine Verbindung
                 Socket socket = null;
                 try {
                     socket = serverSocket.accept();
-                    logger.info("Accepted connection");
+                    logger("Accepted connection");
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
 
                 if(socket == null){
-                    logger.info("Acceoted socket is null");
+                    logger("Accepted socket is null");
                 }
 
                 // Abbruch, wenn der Server gestoppt wird
                 if (!serverStatus) break;
 
-                logger.info("Starting client thread");
-                ClientThread ct = new ClientThread(socket);
-                clientList.add(ct);
+                logger("Starting client thread");
+                int goodIndex = getGoodIndex();
+                ClientThread ct = new ClientThread(socket,goodIndex);
+                clientList.add(goodIndex,ct);
                 ct.start();
             }
+
             try {
                 serverSocket.close();
                 for (int i = 0; i < clientList.size(); ++i) {
@@ -128,6 +131,16 @@ public class ChatServer {
 
 	}
 
+	// We want to have a small group of users but the ids always near each other
+	private int getGoodIndex(){
+	    for(int i = 0; i < clientList.size(); i++){
+	        if(clientList.get(i) == null){
+	            return i;
+            }
+        }
+        return clientList.size();
+    }
+
 	public String loggedUsers() {
 	    String userList = "";
 		int size = clientList.size();
@@ -141,6 +154,8 @@ public class ChatServer {
 		logger.info(msg);
 	}
 
+
+	// ClientThread
 	public class ClientThread extends Thread {
         Socket socket;
         int id;
@@ -151,17 +166,17 @@ public class ChatServer {
         String chatRoom;
         String username;
 
-        ClientThread(Socket socket) {
+        ClientThread(Socket socket, int index) {
             // a unique id
-            id = ++uniqueId;
+            id = index;
             this.socket = socket;
             this.chatRoom = GENERAL_CHAT_ROOM;
-
             System.out.println("Thread trying to create Object Input/Output Streams");
             try {
                 sOutput = new ObjectOutputStream(socket.getOutputStream());
                 sInput = new ObjectInputStream(socket.getInputStream());
-                username = (String) sInput.readObject();
+                ChatMessage chatMessage = (ChatMessage) sInput.readObject();
+                username = chatMessage.getText();
             } catch (IOException e) {
                 e.printStackTrace();
             } catch (ClassNotFoundException e) {
@@ -169,6 +184,7 @@ public class ChatServer {
             }
 
             logger.info("Initialized ClientThread " +  getUsername());
+            //TODO: Send date?
             date = new Date().toString() + "\n";
         }
 
@@ -188,10 +204,43 @@ public class ChatServer {
 
                 String message = cm.getText();
                 String roomName = cm.getChatRoomName();
-                logger.info(getUsername() + " sent following message: " + message);
+                logger(getUsername() + " sent following message: " + message);
 
                 ChatRoom cr = null;
                 switch (cm.getType()) {
+                    case ChatMessage.INITIALIZE:
+                        while(true) {
+                            try {
+                                int size = clientList.size();
+                                for(int i = 0; i < size; i++){
+                                    if(clientList.get(i).getUsername().equals(message)){
+                                        logger("Username already taken");
+                                        sendMessage("Username already taken",GENERAL_CHAT_ROOM,ChatMessage.ERR_USERNAME);
+                                        ChatMessage msg =(ChatMessage) sInput.readObject();
+                                        message = msg.getText();
+                                        continue;
+                                    }
+                                }
+                                username = message;
+                                logger(getUsername() + " logged successfully in");
+                                break;
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            } catch (ClassNotFoundException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    case ChatMessage.USERS_IN_CHATROOM:
+                        String users = chatRoom + "\n";
+                        if(chatRoom.equals(GENERAL_CHAT_ROOM)){
+                            sendMessage(loggedUsers(),chatRoom,ChatMessage.USERS_IN_CHATROOM);
+                            break;
+                        }
+                        ArrayList<Integer> clientsInChat = roomClientMap.get(chatRoom);
+                        for(int i = 0; i < clientsInChat.size(); i++){
+                            users += (clientList.get(clientsInChat.get(i)-1).getUsername()) + "\n";
+                        }
+                        sendMessage(users,chatRoom,ChatMessage.USERS_IN_CHATROOM);
 
                     // Login to a chatroom
                     case ChatMessage.CHATROOM:
@@ -229,12 +278,12 @@ public class ChatServer {
                             }
                         }
                         cr = new ChatRoom(message);
-                        ArrayList users = new ArrayList<Integer>();
+                        ArrayList usersArray = new ArrayList<Integer>();
                         roomList.add(cr);
-                        users.add(roomList.indexOf(cr));
-                        users.add(id);
-                        System.out.println("Users size " + users.size());
-                        roomClientMap.put(cr.getName(),users);
+                        usersArray.add(roomList.indexOf(cr));
+                        usersArray.add(id);
+                        System.out.println("Users size " + usersArray.size());
+                        roomClientMap.put(cr.getName(),usersArray);
                         this.chatRoom = message;
                         // Answer and logging
                         sendMessage("\nConnected to chatroom: " + cr.getName(),roomName,ChatMessage.CREATE_CHATROOM);
@@ -261,18 +310,19 @@ public class ChatServer {
                         }
                         if (roomClientMap.containsKey(roomName)) {
                             ArrayList<Integer> clientListofRoom = roomClientMap.get(roomName);
+                            // -1 because of the chatroomindex
                             int size = clientListofRoom.size()-1;
 
-                            for(int i = CHATROOM_INDEX_POS; i < size; i++){
+                            for(int i = 0; i < size; i++){
                                 int a = i+1;
                                 // -1 because of uniqueId beginning at 1, but we need to start from 0
-                                ClientThread akkuCT = clientList.get(clientListofRoom.get(a)-1);
+                                ClientThread akkuCT = clientList.get(clientListofRoom.get(a));
                                 long threadId = akkuCT.getClientId();
                                 if(threadId != id){
                                     String send = getUsername() + "|" + roomName + " > " + message;
                                     boolean isMessageSent = akkuCT.sendMessage(send,roomName,ChatMessage.MESSAGE);
                                     if(!isMessageSent){
-                                        System.out.println("Removing " + getUsername());
+                                        //TODO: sinnvolle reaktion?
                                         clientList.remove(akkuCT);
                                     } else {
                                         cr = roomList.get(roomClientMap.get(roomName).get(CHATROOM_INDEX_POS));
@@ -287,7 +337,9 @@ public class ChatServer {
                         break;
                     // Logout from the server
                     case ChatMessage.LOGOUT:
-                        //TODO: delete the user from all lists and so on
+                        clientList.remove(this);
+                        int index = roomClientMap.get(chatRoom).indexOf(this.id);
+                        roomClientMap.get(chatRoom).remove(index);
                         running = false;
                         break;
                     case ChatMessage.OTHER_USERS:
@@ -298,6 +350,7 @@ public class ChatServer {
         }
 
         private boolean sendMessage(String message, String room, int type) {
+            logger("Sending message");
             try {
                 switch (type) {
                     case ChatMessage.MESSAGE:
@@ -306,6 +359,11 @@ public class ChatServer {
                             sOutput.writeObject(message);
                         }
                         sOutput.writeObject("");
+                        return true;
+                    case ChatMessage.ERR_USERNAME:
+                        logger("Already used username");
+                        sOutput.writeObject(ERR_USERNAME);
+                        sOutput.writeObject(message);
                         return true;
                     case ChatMessage.ERROR:
                         //System.out.println("ERROOOOOOOOOOOR");

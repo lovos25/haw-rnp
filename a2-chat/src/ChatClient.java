@@ -47,6 +47,8 @@ public class ChatClient {
                 sendMessage(ChatServer.GENERAL_CHAT_ROOM, username + " requesting list of users",ChatMessage.OTHER_USERS);
             } else if(msg.equalsIgnoreCase(LIST_CHATROOMS)) {
                 sendMessage(ChatServer.GENERAL_CHAT_ROOM, username + " requesting list of chatrooms",ChatMessage.LIST_CHATROOMS);
+            } else if(msg.equalsIgnoreCase(USERS_IN_CHATROOM)) {
+                sendMessage(ChatServer.GENERAL_CHAT_ROOM, username + " requesting list of users in current chatroom",ChatMessage.USERS_IN_CHATROOM);
             } else if(msg.equalsIgnoreCase(CREATE_CHATROOM)) {
                 System.out.print("Write down the name for your new chatroom > ");
                 BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
@@ -98,7 +100,6 @@ public class ChatClient {
 //        System.out.println("Connection accepted " + socket.getPort());
         //TODO: Serverlist add
 
-
         try {
             sInput  = new ObjectInputStream(socket.getInputStream());
             sOutput = new ObjectOutputStream(socket.getOutputStream());
@@ -107,24 +108,43 @@ public class ChatClient {
             return false;
         }
 
-        // creates the Thread to listen from the server
-        new ListenFromServer().start();
+        // username decision
+        username();
 
-        try {
-            System.out.print("Username > ");
-            BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-            username = br.readLine();
-            sOutput.writeObject(username);
-            System.out.println("@Username saved and logged in");
-        } catch (IOException eIO) {
-            logout();
-            return false;
-        }
+        new ListenFromServer().start();
         // success we inform the caller that it worked
         start();
         return true;
     }
 
+
+    private boolean username(){
+        try {
+            while(true) {
+                System.out.print("Username > ");
+                BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+                username = br.readLine();
+                sendMessage(ChatServer.GENERAL_CHAT_ROOM,ChatServer.STANDARD_USER,ChatMessage.INITIALIZE);
+                sendMessage(ChatServer.GENERAL_CHAT_ROOM,username,ChatMessage.INITIALIZE);
+                // Check if username has been taken already
+                String taken = (String) sInput.readObject();
+                if (taken.equals(ChatServer.ERR_USERNAME)){
+                    taken = (String) sInput.readObject();
+                    System.out.println(taken);
+                } else {
+                    System.out.println("@Username saved and logged in");
+                    break;
+                }
+            }
+        } catch (IOException eIO) {
+            logout();
+            return false;
+        } catch (ClassNotFoundException e) {
+            logout();
+            return false;
+        }
+        return true;
+    }
     private void logout() {
         if(sInput != null && socket != null ) {
             sendMessage(ChatServer.GENERAL_CHAT_ROOM, "", ChatMessage.LOGOUT);
@@ -164,6 +184,7 @@ public class ChatClient {
         private boolean serverCall = false;
         private boolean error = false;
         public boolean running = true;
+        private boolean username_error = false;
         public void run() {
             while(running) {
                 try {
@@ -183,7 +204,12 @@ public class ChatClient {
                         System.out.println(msg);
                         //System.out.print(username + "|" + chatRoom + " > ");
                         serverCall = false;
-                        System.out.println("Syscall " + chatRoom);
+                    }else if(username_error) {
+                        System.out.println(msg);
+                        serverCall = false;
+                    } else if(msg.equals(ChatServer.ERR_USERNAME)) {
+                        username_error = true;
+                        continue;
                     } else if(msg.equals(ChatServer.MESSAGE_FROM_OTHER_CLIENT)) {
                         realMsg = true;
                         continue;
