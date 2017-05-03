@@ -4,7 +4,6 @@ package src;
  * Created by Zujiry on 01/05/2017.
  */
 public class TestFrame {
-    private int serverPort;
 
     public static void main(String[] args) {
         ChatServer server;
@@ -16,7 +15,7 @@ public class TestFrame {
             System.out.println("Server could not be created or has been shutdown");
         } else {
             ChatClient client = new ChatClient();
-            client.login("localhost",port);
+            client.login("",port);
         }
     }
 }
