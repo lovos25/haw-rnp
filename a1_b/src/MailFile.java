@@ -1,6 +1,4 @@
-package src; /**
- * Created by zujiry on 4/10/17.
- */
+
 import java.util.Base64;
 import java.io.*;
 import java.util.logging.FileHandler;
@@ -24,13 +22,13 @@ public class MailFile {
         enableLogging(LOGGING);
 
         // Receiver
-        String receiverEmail = "";//args[2];
+        String receiverEmail = "amanpreet.kaur@haw-hamburg.de";//args[2];
        
         // Attachment
         String fileName = "Anhang";
         
         Properties properties = new Properties(logger);
-        String attachmentFilePath = "/home/zujiry/Documents/Anhang.jpg";
+        String attachmentFilePath = "/Users/LovelyKaur/workspace/haw-rnp/a1_b/testfiles/gumpy.gif";
         
         logger.info("Reading data file");
 
@@ -57,7 +55,10 @@ public class MailFile {
             		properties.getEmailSubject(), 
             		properties.getSenderPort(),
             		properties.getSenderUsernameB64(),
-            		properties.getSenderPasswordB64())
+            		properties.getSenderPasswordB64(),
+            		fileName,
+            		attachmentFilePath
+            		)
             	){
                 logger.info("Email sent");
             } else {
