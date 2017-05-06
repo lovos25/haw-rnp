@@ -1,4 +1,4 @@
-package src;
+package chat;
 
 /**
  * Created by Zujiry on 01/05/2017.
@@ -6,8 +6,8 @@ package src;
 public class TestFrame {
 
     public static void main(String[] args) {
-        int port = 13000;
-        String serverOrClient = "0";
+        int port = 3000;
+        String serverOrClient = "1";
 
         if(serverOrClient == "1"){
             new ChatServer(port);//Integer.parseInt(args[1]));

@@ -1,4 +1,4 @@
-package src;
+package chat;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -15,10 +15,13 @@ import java.util.logging.SimpleFormatter;
 
 public class ChatServer {
     //TODO: ask for users in chatroom, protocol? (Send all the static things in the beginning)
-    // Base chatroom
+	
+    // Base chatroom wher all the users get by first login
     public static String GENERAL_CHAT_ROOM = "GENERAL";
-    // The index on which the chatroom  index is saved inside the Integer array of the roomClientMap
+    
+    // The index on which the chatroom index is saved inside the Integer array of the roomClientMap
     public static int CHATROOM_INDEX_POS = 0;
+    
     // Message types for the clients
     public static String MESSAGE_FROM_OTHER_CLIENT = "##";
     public static String SERVER_CALL = "################";
@@ -35,7 +38,8 @@ public class ChatServer {
 	// Server status: An oder Aus
 	private List<ChatRoom> roomList = new ArrayList<>();
 
-	private HashMap<String,ArrayList<Integer>> roomClientMap = new HashMap<>();
+	// CLient -> Room Mapping
+	private HashMap<String, ArrayList<Integer>> roomClientMap = new HashMap<>();
 
 	// Server status: An oder Aus
 	private List<ClientThread> clientList = new ArrayList<ClientThread>();
@@ -54,20 +58,27 @@ public class ChatServer {
 
     // Constructor
 	public ChatServer(int port) {
-	    this.port = port;
         logging();
-
-	    ChatRoom generalChatRoom = new ChatRoom("General Chatroom");
+        
+	    this.port = port;
+	    
+	    // Erstelle eine general chat room
+	    ChatRoom generalChatRoom = new ChatRoom(GENERAL_CHAT_ROOM);
         this.roomList.add(generalChatRoom);
+        
         logger("Created Server");
+        
         this.start();
 	}
 
+	/**
+	 * Logging
+	 */
 	private void logging(){
-        this.logger = Logger.getLogger("ServerLogger");
-
+        ChatServer.logger = Logger.getLogger("ServerLogger");
+        
         try {
-            FileHandler fileHandler = new FileHandler("D:\\Git-Repos\\haw-rnp\\a2-chat\\src\\ServerLog.log");
+            FileHandler fileHandler = new FileHandler(System.getProperty("user.dir") + "//logging//ServerLog.log");
             logger.addHandler(fileHandler);
             SimpleFormatter sf = new SimpleFormatter();
             fileHandler.setFormatter(sf);
@@ -83,15 +94,18 @@ public class ChatServer {
 	 * @throws IOException 
 	 */
 	public void start() {
-	    clientList.add(null);
+	    clientList.add(null); // FAGEN hä warum?
         serverStatus = true;
+        
 	    try {
             serverSocket = new ServerSocket(port);
             logger.info("Server ist auf dem Port " + port + " gestartet");
+           
             while (serverStatus) {
 
                 // Lauscht auf eine Verbindung
                 Socket socket = null;
+                
                 try {
                     socket = serverSocket.accept();
                     logger("Accepted connection");
@@ -107,14 +121,18 @@ public class ChatServer {
                 if (!serverStatus) break;
 
                 logger("Starting client thread");
+                
+                // Client Thread erstellen
                 int goodIndex = getGoodIndex();
                 ClientThread ct = new ClientThread(socket,goodIndex);
-                clientList.add(goodIndex,ct);
+                clientList.add(goodIndex, ct);
                 ct.start();
             }
-
+            
+            // socket Verbindung schliessen 
             try {
                 serverSocket.close();
+                // Jedes Client thread schliessen
                 for (int i = 1; i < clientList.size(); ++i) {
                     ClientThread tc = clientList.get(i);
                     try {
@@ -126,16 +144,12 @@ public class ChatServer {
                     }
                 }
             } catch (Exception e) {
+            	logger("Exception: Server und Client geschlossen " + e);
             }
-        } catch (IOException e) {}
+        } catch (IOException e) {
+        	logger("Exception: Server socket kann nicht erstellt werden " + e);
+        }
     }
-	
-	/**
-	 * Die vorhandene Socketverbindung wird hier unterbrochen
-	 */
-	public void stop() {
-
-	}
 
 	public String help(){
 	    String help = "########     help_server:    ##########\n" +
@@ -150,7 +164,10 @@ public class ChatServer {
 	    return help;
     }
 
-	// We want to have a small group of users but the ids always near each other
+	/**
+	 * We want to have a small group of users but the ids always near each other
+	 * @return int 	the next free number
+	 */
 	private int getGoodIndex(){
 	    for(int i = 1; i < clientList.size(); i++){
 	        if(clientList.get(i) == null){
@@ -159,63 +176,76 @@ public class ChatServer {
         }
         return clientList.size();
     }
-
+	
+	/**
+	 * Gibt ein String mit allen eingeloggten Usern zurück
+	 * @return
+	 */
 	public String loggedUsers() {
 	    String userList = "";
-		int size = clientList.size();
-	    for(int i = 1; i < size; i++){
-	        userList =  userList + clientList.get(i).getUsername() + "\n";
+	    
+		for(int i = 1; i < clientList.size(); i++){
+	        userList += clientList.get(i).getUsername() + "\n";
         }
 	    return userList;
 	}
 	
+	/**
+	 * Zeige die Nachricht auf der Konsole
+	 * @param msg
+	 */
 	private void logger(String msg) {
 		logger.info(msg);
 	}
 
 
-	// ClientThread
+	/**
+	 * Für jeden Client wird ein ClientThread Instance erstellt
+	 */
 	public class ClientThread extends Thread {
-        Socket socket;
-        int id;
-        String date;
-        ObjectInputStream sInput;
-        ObjectOutputStream sOutput;
-        ChatMessage cm;
-        String chatRoom;
-        String username;
+        Socket socket; // the socket where to listen/talk
+        ObjectInputStream sInput; // eingehende Nachricht
+        ObjectOutputStream sOutput; // aussgehene Nachricht
+        int id; // unique id
+        
+        ChatMessage cm;	// message type we receive
+        String chatRoom; // the chatroom
+        String username; // the client username
 
         ClientThread(Socket socket, int index) {
             // a unique id
             id = index;
             this.socket = socket;
             this.chatRoom = GENERAL_CHAT_ROOM;
+            
             logger("Thread trying to create Object Input/Output Streams");
             try {
                 sOutput = new ObjectOutputStream(socket.getOutputStream());
                 sInput = new ObjectInputStream(socket.getInputStream());
+                
                 ChatMessage chatMessage = (ChatMessage) sInput.readObject();
                 username = chatMessage.getText();
+                logger(username + " hat sich connected");
             } catch (IOException e) {
+            	logger("Exception beim Erstellen von new Input/output Streams: " + e);
                 e.printStackTrace();
             } catch (ClassNotFoundException e) {
-                e.printStackTrace();
+                e.printStackTrace(); // wird nicht auftreten
             }
 
             logger.info("Initialized ClientThread " +  getUsername());
-            //TODO: Send date?
-            date = new Date().toString() + "\n";
         }
 
         @Override
         public void run() {
             logger.info("ClientThread " + getUsername() + " started");
             boolean running = true;
+            
             while (running) {
-                try {
+                try { // read is String
                     cm = (ChatMessage) sInput.readObject();
                 } catch (IOException e) {
-                    logger("ClientThread " + getUsername() + " closed");
+                    logger("ClientThread lesen " + getUsername() + " closed");
                     //TODO: Delete everything from clienthtread
                     e.printStackTrace();
                     break;
@@ -227,6 +257,7 @@ public class ChatServer {
                 String message = cm.getText();
                 String roomName = cm.getChatRoomName();
                 logger(chatRoom +  ": " + getUsername() + " sent following message: " + message);
+                
                 Integer size = null;
                 ChatRoom cr = null;
                 switch (cm.getType()) {
