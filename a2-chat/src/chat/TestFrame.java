@@ -7,10 +7,10 @@ public class TestFrame {
 
     public static void main(String[] args) {
         int port = 3000;
-        String serverOrClient = "1";
+        String serverOrClient = "0";
 
         if(serverOrClient == "1"){
-            new ChatServer(port);//Integer.parseInt(args[1]));
+            new ChatServer(port);
             System.out.println("Server could not be created or has been shutdown");
         } else {
             ChatClient client = new ChatClient();

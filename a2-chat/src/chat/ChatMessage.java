@@ -21,27 +21,27 @@ public class ChatMessage implements Serializable {
 		IN_CHATROOM = 8,	// chatroom now
 		USERS_IN_CHATROOM = 9, 	// list of users in chatroom
 		ERR_USERNAME = 10, 		// hä
-		INITIALIZE = 11, 		// hä
+		INITIALIZE = 11, 		// first register
 		HELP_SERVER = 12;		// help
 	
 	// The different types of message sent by the Client
 	private int type;
 	
 	// The plant text message
-	private String text;
+	private String message;
 	
 	// Message belongs to room
-	private String chatRoomId;
+	private String room;
 	
-	public ChatMessage(String text, int type, String chatRoomId) {
-		this.text = text;
+	public ChatMessage(String message, String room, int type) {
+		this.message = message;
 		this.type = type;
-		this.chatRoomId = chatRoomId;
+		this.room = room;
 	}
 	
 	// getter
 	public String getText() {
-		return text;
+		return message;
 	}
 
 	public int getType() {
@@ -49,6 +49,6 @@ public class ChatMessage implements Serializable {
 	}
 
 	public String getChatRoomName() {
-		return chatRoomId;
+		return room;
 	}
 }

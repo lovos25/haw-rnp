@@ -106,9 +106,6 @@ public class ChatClient {
             return false;
         }
 
-//        System.out.println("Connection accepted " + socket.getPort());
-        //TODO: Serverlist add
-
         try {
             sInput  = new ObjectInputStream(socket.getInputStream());
             sOutput = new ObjectOutputStream(socket.getOutputStream());
@@ -129,18 +126,19 @@ public class ChatClient {
 
     private boolean username(){
         try {
-            System.out.print("Username > ");
+            System.out.print("Username eingeben > ");
             BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
             username = br.readLine();
-            sendMessage(ChatServer.GENERAL_CHAT_ROOM,ChatServer.STANDARD_USER,ChatMessage.INITIALIZE);
+            
             while(true) {
-                sendMessage(ChatServer.GENERAL_CHAT_ROOM,username,ChatMessage.INITIALIZE);
+                sendMessage(username, ChatServer.GENERAL_CHAT_ROOM, ChatMessage.INITIALIZE);
+                
                 // Check if username has been taken already
                 String taken = (String) sInput.readObject();
                 if (taken.equals(ChatServer.ERR_USERNAME)){
                     taken = (String) sInput.readObject();
                     System.out.println(taken);
-                    System.out.print("Username > ");
+                    System.out.print("Username eingeben > ");
                     username = br.readLine();
                 } else {
                     System.out.println("@Username saved and logged in");
@@ -156,16 +154,17 @@ public class ChatClient {
         }
         return true;
     }
+    
     private void logout() {
         if(sOutput != null && socket != null ) {
-            sendMessage(ChatServer.GENERAL_CHAT_ROOM, "", ChatMessage.LOGOUT);
+            sendMessage("", ChatServer.GENERAL_CHAT_ROOM, ChatMessage.LOGOUT);
         }
 
         try {
             if(sInput != null)
                 sInput.close();
-        }
-        catch(Exception e) {}
+        } catch(Exception e) {}
+        
         try {
             if(sOutput != null)
                 sOutput.close();
@@ -180,8 +179,7 @@ public class ChatClient {
     }
 
     private void logoutRoom() {
-    	chatRoom = ChatServer.GENERAL_CHAT_ROOM;
-    	boolean msg = sendMessage(ChatServer.GENERAL_CHAT_ROOM, "", ChatMessage.CHATROOM_LOGOUT);
+    	boolean msg = sendMessage("", ChatServer.GENERAL_CHAT_ROOM, ChatMessage.CHATROOM_LOGOUT);
     	
     	if(msg) {
     		System.out.println("Logout war Erfolgreich");
@@ -190,8 +188,8 @@ public class ChatClient {
     	}
     }
     
-    public boolean sendMessage(String chatRoom, String messageText, int type){
-        ChatMessage cm = new ChatMessage(messageText,type,chatRoom);
+    public boolean sendMessage(String message, String room, int type) {
+        ChatMessage cm = new ChatMessage(message, room, type);
 
         try {
             sOutput.writeObject(cm);
