@@ -40,7 +40,7 @@ public class ChatClient {
             switch (msg.toUpperCase()) {
 
                 case "HELP_SERVER":
-                    sendMessage(ChatServer.GENERAL_CHAT_ROOM, "Help please", ChatMessage.HELP_SERVER);
+                    sendMessage("Help please", ChatServer.GENERAL_CHAT_ROOM, ChatMessage.HELP_SERVER);
                     break;
 	            case "LOGOUT": // logout if message is LOGOUT
 	            	logout();
@@ -49,16 +49,16 @@ public class ChatClient {
 	            	logoutRoom();
 	            	break;
 	            case "IN_CHATROOM": 
-	            	sendMessage(ChatServer.GENERAL_CHAT_ROOM, "which chatroom am I in?", ChatMessage.IN_CHATROOM);
+	            	sendMessage("which chatroom am I in?", ChatServer.GENERAL_CHAT_ROOM, ChatMessage.IN_CHATROOM);
 	            	break;
 	            case "USERS_IN_CHATROOM": 
-	                sendMessage(ChatServer.GENERAL_CHAT_ROOM, "which chatroom am I in?", ChatMessage.USERS_IN_CHATROOM);
+	                sendMessage("which chatroom am I in?", ChatServer.GENERAL_CHAT_ROOM, ChatMessage.USERS_IN_CHATROOM);
 	            	break;
 	            case "LIST_USERS":
-                    sendMessage(ChatServer.GENERAL_CHAT_ROOM, username + " requesting list of users", ChatMessage.LIST_USERS);
+                    sendMessage(username + " requesting list of users", ChatServer.GENERAL_CHAT_ROOM, ChatMessage.LIST_USERS);
 	            	break;
 	            case "LIST_CHATROOMS":
-	            	sendMessage(ChatServer.GENERAL_CHAT_ROOM, username + " requesting list of chatrooms",ChatMessage.LIST_CHATROOMS);
+	            	sendMessage(username + " requesting list of chatrooms", ChatServer.GENERAL_CHAT_ROOM, ChatMessage.LIST_CHATROOMS);
 	            	break;
 	            case "CREATE_CHATROOM":
 	            	System.out.print("Write down the name for your new chatroom > ");
@@ -70,7 +70,7 @@ public class ChatClient {
 	                    e.printStackTrace();
 	                }
 	                // Set roomname if message could be sent
-	                if (sendMessage(ChatServer.GENERAL_CHAT_ROOM,roomname,ChatMessage.CREATE_CHATROOM)) {
+	                if (sendMessage(roomname, ChatServer.GENERAL_CHAT_ROOM, ChatMessage.CREATE_CHATROOM)) {
 	                    oldChatRoom = chatRoom;
 	                    chatRoom = roomname;
 	                }
@@ -83,12 +83,12 @@ public class ChatClient {
 	                } catch (IOException e) {
 	                    e.printStackTrace();
 	                }
-	                sendMessage(ChatServer.GENERAL_CHAT_ROOM, roomname, ChatMessage.JOIN_CHATROOM);
+	                sendMessage(roomname, ChatServer.GENERAL_CHAT_ROOM, ChatMessage.JOIN_CHATROOM);
 	                oldChatRoom = chatRoom;
 	                chatRoom = roomname;
 	                break;
 	            default:
-	            	sendMessage(chatRoom,msg,ChatMessage.MESSAGE);
+	            	sendMessage(msg, chatRoom, ChatMessage.MESSAGE);
 	            	break;
             }
 
@@ -206,23 +206,21 @@ public class ChatClient {
         private boolean error = false;
         public boolean running = true;
         private boolean username_error = false;
+        
         public void run() {
             while(running) {
                 try {
                     String msg = (String) sInput.readObject();
                     if(realMsg){
                         System.out.println(msg);
-                        //System.out.print(username + "|" + chatRoom + " > ");
                         realMsg = false;
                     } else if(error) {
                         //TODO: Correct output when joining a nonexistent chatroom
                         System.out.println(msg);
                         chatRoom = oldChatRoom;
-                        //System.out.print(username + "|" + chatRoom + " > ");
                         error = false;
                     }else if(serverCall) {
                         System.out.println(msg);
-                        //System.out.print(username + "|" + chatRoom + " > ");
                         serverCall = false;
                     }else if(username_error) {
                         System.out.println(msg);
