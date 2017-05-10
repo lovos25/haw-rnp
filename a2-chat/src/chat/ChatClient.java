@@ -129,12 +129,16 @@ public class ChatClient {
             System.out.print("Username eingeben > ");
             BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
             username = br.readLine();
-            
-            while(true) {
-                sendMessage(username, ChatServer.GENERAL_CHAT_ROOM, ChatMessage.INITIALIZE);
+            sendMessage(username, ChatServer.GENERAL_CHAT_ROOM, ChatMessage.INITIALIZE);
+            //sendMessage(ChatServer.STANDARD_USER, ChatServer.GENERAL_CHAT_ROOM, ChatMessage.INITIALIZE);
+
+            System.out.println("@Username saved and logged in");
+            /*while(true) {
+                
                 
                 // Check if username has been taken already
                 String taken = (String) sInput.readObject();
+                System.out.println("Vom Server erhaltene: " + taken );
                 if (taken.equals(ChatServer.ERR_USERNAME)){
                     taken = (String) sInput.readObject();
                     System.out.println(taken);
@@ -144,14 +148,11 @@ public class ChatClient {
                     System.out.println("@Username saved and logged in");
                     break;
                 }
-            }
+            }*/
         } catch (IOException eIO) {
             logout();
             return false;
-        } catch (ClassNotFoundException e) {
-            logout();
-            return false;
-        }
+        } 
         return true;
     }
     
@@ -211,6 +212,7 @@ public class ChatClient {
             while(running) {
                 try {
                     String msg = (String) sInput.readObject();
+                    System.out.println("Erste Nachricht " + msg);
                     if(realMsg){
                         System.out.println(msg);
                         realMsg = false;

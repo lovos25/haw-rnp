@@ -46,6 +46,7 @@ public class ChatServer {
 
 	// Server status: An oder Aus
 	private List<ClientThread> clientList = new ArrayList<ClientThread>();
+	private HashMap<Integer, ClientThread> clientMapList = new HashMap<Integer, ClientThread>();
 
 	// Port über den die Connection läuft
 	private int port;
@@ -98,7 +99,6 @@ public class ChatServer {
 	 * @throws IOException
 	 */
 	public void start() {
-		clientList.add(null); // FAGEN hä warum?
 		serverStatus = true;
 
 		try {
@@ -273,56 +273,46 @@ public class ChatServer {
 			id = index;
 			this.socket = socket;
 			this.chatRoom = GENERAL_CHAT_ROOM;
+			clientMapList.put(id, this);
 
 			logger("Thread trying to create Object Input/Output Streams");
 			try {
 				sOutput = new ObjectOutputStream(socket.getOutputStream());
 				sInput = new ObjectInputStream(socket.getInputStream());
 
-				ChatMessage chatMessage = (ChatMessage) sInput.readObject();
-				initializeUser(chatMessage);
-
-				username = chatMessage.getText();
-				logger(username + " hat sich connected");
 			} catch (IOException e) {
 				logger("Exception beim Erstellen von new Input/output Streams: " + e);
 				e.printStackTrace();
-			} catch (ClassNotFoundException e) {
-				e.printStackTrace(); // wird nicht auftreten
 			}
 
 			logger.info("Initialized ClientThread " + getUsername());
 		}
 
-		private void initializeUser(ChatMessage message) {
-			switch (message.getType()) {
-				case ChatMessage.INITIALIZE:
-					boolean initialized = true;
-					for (int i = 1; i < clientList.size(); i++) {
-						System.out.println("vergleiche " + clientList.get(i).getUsername() + " mit " + message.getText());
-						if (clientList.get(i).getUsername().equals(message.getText())) {
-							logger("Username bereits vergeben");
-							broadcast("Username already taken", roomList.get(0), ChatMessage.ERR_USERNAME);
-							initialized = false;
-							break;
-						}
-					}
-					
-					System.out.println(id);
-					if (initialized || clientList.isEmpty()) {
-						username = message.getText();
-						
-						ArrayList<Integer> roomClients = roomClientMap.get(roomList.get(0));
-						roomClients.add(id);
-						roomClientMap.put(roomList.get(0), roomClients );
-						
-
-						logger("Login successful fuer " + getUsername());
-						logger("Added to General Chatroom" + getUsername());
-						broadcast("Login successful", roomList.get(0), ChatMessage.MESSAGE);
-					}
+		private synchronized void initializeUser(ChatMessage message) {
+			boolean initialized = true;
+			
+/*			for (ClientThread clientThread : clientList) {
+				System.out.println("vergleiche " + clientThread.getUsername() + " mit " + message.getText());
+				if (clientThread.getUsername().equals(message.getText())) {
+					logger("Username bereits vergeben");
+					broadcast("Username already taken", roomList.get(0), ChatMessage.ERR_USERNAME);
+					initialized = false;
 					break;
+				}
 			}
+*/
+			
+			//if (initialized) {
+			username = message.getText();
+			
+			ArrayList<Integer> roomClients = roomClientMap.get(roomList.get(0));
+			roomClients.add(id);
+			roomClientMap.put(roomList.get(0), roomClients );
+			
+
+			logger("Login successful fuer " + getUsername());
+			logger("Added to General Chatroom" + getUsername());
+			broadcast("Login successful", roomList.get(0), ChatMessage.MESSAGE);
 
 		}
 
@@ -330,7 +320,7 @@ public class ChatServer {
 		public void run() {
 			logger.info("ClientThread " + getUsername() + " started");
 			boolean running = true;
-
+			
 			while (running) {
 				try {
 					cm = (ChatMessage) sInput.readObject();
@@ -342,7 +332,7 @@ public class ChatServer {
 					logger("ClientThread " + getUsername() + " closed");
 					e.printStackTrace();
 				}
-
+				
 				String message = cm.getText();
 				String roomName = cm.getChatRoomName();
 				logger(chatRoom + ": " + getUsername() + " sent following message: " + message);
@@ -532,7 +522,7 @@ public class ChatServer {
 
 			// send the message to client
 			try {
-				logger("Nachricht an " + username + " wurde nicht versendet!");
+				logger("Nachricht an " + username + " wurde versendet!");
 				sOutput.writeObject(message);
 			} catch (IOException e) {
 				logger("ERROR: Nachricht an " + username + " wurde nicht versendet!");
