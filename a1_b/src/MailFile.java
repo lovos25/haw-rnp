@@ -24,13 +24,13 @@ public class MailFile {
         enableLogging(LOGGING);
 
         // Receiver
-        String receiverEmail = "";//args[2];
+        String receiverEmail = "till.pohland@haw-hamburg.de";//args[2];
        
         // Attachment
         String fileName = "Anhang";
         
         Properties properties = new Properties(logger);
-        String attachmentFilePath = "/home/zujiry/Documents/Anhang.jpg";
+        String attachmentFilePath = "D:\\Git-Repos\\haw-rnp\\a1_b\\testfiles\\File.txt";
         
         logger.info("Reading data file");
 

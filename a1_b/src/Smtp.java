@@ -54,8 +54,8 @@ class Smtp {
 		br = new BufferedReader(new InputStreamReader(inputStream));
 		pw = new PrintWriter(new OutputStreamWriter(outputStream));
 
-		pw.println("EHLO " + mailHost);
-		logger.info("EHLO " + br.readLine());
+		pw.println("HELO " + mailHost);
+		logger.info("HELO " + br.readLine());
 
 		pw.println("AUTH PLAIN");
 		pw.println(senderUsername);
