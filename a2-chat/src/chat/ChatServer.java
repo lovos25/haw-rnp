@@ -333,12 +333,17 @@ public class ChatServer {
 				Integer size = null;
 				ChatRoom cr = null;
 				switch (cm.getType()) {
+					// Intialize User
 					case ChatMessage.INITIALIZE:
 						initializeUser(cm);
 						break;
+
+					// call help 
 					case ChatMessage.HELP_SERVER:
 						broadcast(help(), chatRoom, ChatMessage.HELP_SERVER);
 						break;
+					
+					// List of Users in Chatroom
 					case ChatMessage.USERS_IN_CHATROOM:
 						String users = "Chatroom " + chatRoom + ":\n";
 						if (chatRoom.equals(GENERAL_CHAT_ROOM)) {
@@ -346,22 +351,23 @@ public class ChatServer {
 							break;
 						}
 	
-						/*ArrayList<ChatClient> clientsInChat = roomClientMap.get(chatRoom);
-						for (int i = 1; i < clientsInChat.size(); i++) {
-							if (clientList.get(clientsInChat.get(i)) != null)
-								users += (clientList.get(clientsInChat.get(i)).getUsername()) + "\n";
-						}
-						sendMessage(users, chatRoom, ChatMessage.USERS_IN_CHATROOM);*/
 						break;
 	
+					// List all the available chatrooms
+					case ChatMessage.LIST_CHATROOMS:
+						broadcast(roomList.toString(), chatRoom, ChatMessage.LIST_CHATROOMS);
+						logger.info("Listed server for " + getUsername());
+						break;
+						
+
 					// Login to a chatroom
 					case ChatMessage.JOIN_CHATROOM:
 						
-						ChatRoom askedRoom = roomList.stream().filter(r -> r.getName().equals(message)).findAny().orElse(null);
+						ChatRoom askedRoom = getRoomByString(message);
 						logger.info("Client " + getUsername() + " moechte eintreten in " + chatRoom.toString());
 						
 						if (roomClientMap.containsKey(askedRoom)) {
-							removeClientFromOtherRoom();
+							removeClientFromChatRoom();
 							this.chatRoom = askedRoom;
 							
 							ArrayList<Integer> userList = roomClientMap.get(chatRoom);
@@ -384,12 +390,6 @@ public class ChatServer {
 						}
 						break;
 	
-					// List all the available chatrooms
-					case ChatMessage.LIST_CHATROOMS:
-						sendMessage(roomList.toString(), roomName, ChatMessage.LIST_CHATROOMS);
-						logger.info("Listed server for " + getUsername());
-						break;
-	
 					// Create a chatroom
 					case ChatMessage.CREATE_CHATROOM:
 						
@@ -399,7 +399,7 @@ public class ChatServer {
 								break;
 							}
 						}
-						removeClientFromOtherRoom();
+						removeClientFromChatRoom();
 						
 						cr = new ChatRoom(message);
 						this.chatRoom = cr;
@@ -417,9 +417,7 @@ public class ChatServer {
 	
 					// Logout from chatroom
 					case ChatMessage.CHATROOM_LOGOUT:
-						if (roomClientMap.containsKey(roomName)) {
-							roomClientMap.get(roomName).remove(id);
-						}
+						removeClientFromChatRoom();
 						chatRoom = roomList.get(0);
 						break;
 	
@@ -440,7 +438,7 @@ public class ChatServer {
 						running = false;
 						break;
 					case ChatMessage.LIST_USERS:
-						sendMessage(loggedUsers(), roomName, ChatMessage.LIST_USERS);
+						broadcast(loggedUsers(), chatRoom, ChatMessage.LIST_USERS);
 						break;
 					}
 			}
@@ -450,7 +448,7 @@ public class ChatServer {
 		/**
 		 * Client darf immer nur in einem Room sein
 		 */
-		private void removeClientFromOtherRoom() {
+		private void removeClientFromChatRoom() {
 			for (ArrayList<Integer> clientList : roomClientMap.values()) {
 				if(clientList.contains(id)) {
 					logger.info(username + " Removed from chatroom: " + id);
@@ -459,46 +457,9 @@ public class ChatServer {
 			}
 			
 		}
-
-		private boolean sendMessage(String message, String room, int type) {
-			try {
-				switch (type) {
-				case ChatMessage.MESSAGE:
-					broadcast(message, getRoomByString(room), type);
-					break;
-				case ChatMessage.ERR_USERNAME:
-					logger("Already used username");
-					sOutput.writeObject(ERR_USERNAME);
-					sOutput.writeObject(message);
-					break;
-				case ChatMessage.ERROR:
-					sOutput.writeObject(ERROR);
-					sOutput.writeObject(message);
-					break;
-				case ChatMessage.CREATE_CHATROOM:
-				case ChatMessage.LIST_USERS:
-				case ChatMessage.JOIN_CHATROOM:
-				case ChatMessage.LIST_CHATROOMS:
-				default:
-					sOutput.writeObject(SERVER_CALL);
-					sOutput.writeObject(message);
-
-				}
-			} catch (IOException e) {
-				e.printStackTrace();
-				return false;
-			}
-			return true;
-		}
 		
 		public ChatRoom getRoomByString(String sRoom) {
-			ChatRoom cRoom = roomList.get(0);
-			for (ChatRoom room : roomList) {
-				if(room.getName() == sRoom) {
-					return room;
-				}
-			}
-			return cRoom;
+			return roomList.stream().filter(r -> r.getName().equals(sRoom)).findAny().orElse(roomList.get(0));
 		}
 
 		public int getClientId() {
