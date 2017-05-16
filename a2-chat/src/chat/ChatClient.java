@@ -58,7 +58,7 @@ public class ChatClient {
                     sendMessage(username + " requesting list of users", ChatServer.GENERAL_CHAT_ROOM, ChatMessage.LIST_USERS);
 	            	break;
 	            case "LIST_CHATROOMS":
-	            	sendMessage(username + " requesting list of chatrooms", ChatServer.GENERAL_CHAT_ROOM, ChatMessage.LIST_CHATROOMS);
+	            	getChatrooms();
 	            	break;
 	            case "CREATE_CHATROOM":
 	            	System.out.print("Write down the name for your new chatroom > ");
@@ -76,6 +76,7 @@ public class ChatClient {
 	                }
 	                break;
 	            case "JOIN":
+	            	getChatrooms();
 	            	System.out.print("Which chatroom do you want to join? > ");
 	                BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
 	                try {
@@ -88,11 +89,16 @@ public class ChatClient {
 	                chatRoom = roomname;
 	                break;
 	            default:
+	            	System.out.print(chatRoom.toString() + " > ");
 	            	sendMessage(msg, chatRoom, ChatMessage.MESSAGE);
 	            	break;
             }
 
         }
+    }
+    
+    public void getChatrooms() {
+    	sendMessage(username + " requesting list of chatrooms", ChatServer.GENERAL_CHAT_ROOM, ChatMessage.LIST_CHATROOMS);
     }
 
     public boolean login(String server, int serverPort){
