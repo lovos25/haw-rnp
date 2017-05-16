@@ -370,31 +370,25 @@ public class ChatServer {
 	
 					// Login to a chatroom
 					case ChatMessage.JOIN_CHATROOM:
-						if (roomClientMap.containsKey(message)) {
-							boolean idInMap = false;
-							ArrayList<Integer> userList = roomClientMap.get(message);
-							size = userList.size();
-							for (int i = 0; i < size; i++) {
-								if (userList.get(i).equals(id)) {
-									idInMap = true;
-									break;
-								}
-							}
-							System.out.println(idInMap);
-							/*if (!idInMap) {
-								roomClientMap.get(message).add(id);
-								this.chatRoom = message;
-								sendMessage("Joined chatroom " + chatRoom, chatRoom, ChatMessage.MESSAGE);
-								List<ChatMessage> messageLog = roomList
-										.get(roomClientMap.get(message).get(CHATROOM_INDEX_POS)).getMessages();
-								size = messageLog.size();
-								for (int i = 0; i < size; i++) {
-									sendMessage(messageLog.get(i).getText(), messageLog.get(i).getChatRoomName(),
-											messageLog.get(i).getType());
-								}
+						
+						ChatRoom askedRoom = roomList.stream().filter(r -> r.getName().equals(message)).findAny().orElse(null);
+						
+						if (roomClientMap.containsKey(askedRoom)) {
+							chatRoom = askedRoom.toString();
+							ArrayList<Integer> userList = roomClientMap.get(askedRoom);
+							
+							if(!userList.contains(id)) {
+								userList.add(id);
 							} else {
-								sendMessage("Error: Already in chatroom: " + message, chatRoom, ChatMessage.ERROR);
-							}*/
+								sendMessage("Joined already " + chatRoom, chatRoom, ChatMessage.MESSAGE);
+							}
+							
+							sendMessage("Joined chatroom " + chatRoom, chatRoom, ChatMessage.MESSAGE);
+							List<ChatMessage> messageLog = askedRoom.getMessages(); 
+							for (ChatMessage chatMessage : messageLog) {
+								sendMessage(chatMessage.toString(), chatMessage.getChatRoomName(), chatMessage.getType());
+							}
+							
 						} else {
 							sendMessage("Error: Chatroom " + message + " does not exist", chatRoom, ChatMessage.ERROR);
 						}
@@ -408,16 +402,14 @@ public class ChatServer {
 	
 					// Create a chatroom
 					case ChatMessage.CREATE_CHATROOM:
-						// Creating a new chatroom
-						for (int i = 0; i < roomList.size(); i++) {
-							if (roomList.get(i).getName().equals(message)) {
-								sendMessage("Room name is already taken, please choose another one", GENERAL_CHAT_ROOM,
-										ChatMessage.ERROR);
-								// TODO: break just out of for, but has to break
-								// through switch
+						
+						for (ChatRoom chatroom : roomList) {
+							if (chatroom.getName().equals(message)) {
+								sendMessage("Room name is already taken, please choose another one", GENERAL_CHAT_ROOM, ChatMessage.ERROR);
 								break;
 							}
 						}
+						
 						cr = new ChatRoom(message);
 						roomList.add(cr);
 						
