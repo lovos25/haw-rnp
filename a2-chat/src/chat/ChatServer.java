@@ -126,12 +126,8 @@ public class ChatServer {
 					break;
 
 				logger("Starting client thread");
-
-				// Client Thread erstellen
-				int index = getGoodIndex();
-				ClientThread ct = new ClientThread(socket, index);
-				clientList.add(ct);
-				ct.start();
+				intializeClientThread(socket);
+				
 			}
 
 			// socket Verbindung schliessen
@@ -156,7 +152,22 @@ public class ChatServer {
 			return;
 		}
 	}
-
+	
+	/**
+	 * Client Thread erstellen
+	 * @param socket
+	 * @return
+	 */
+	private synchronized void intializeClientThread(Socket socket) {
+		ClientThread clientThread = new ClientThread(socket, getGoodIndex());
+		clientList.add(clientThread);
+		clientThread.start();
+    }
+	
+	/**
+	 * Help
+	 * @return
+	 */
 	public String help() {
 		String help = "########     help_server:    ##########\n" + "show this help\n"
 				+ "logout: Logout from the server\n" + "logout_room: Logout from current chatroom to General\n"
@@ -214,19 +225,20 @@ public class ChatServer {
 	 */
 	private synchronized boolean broadcast(String message, ChatRoom room, int type) {
 		logger("Broadcast - Nachricht wird verbreitet!");
+		
 		if(roomClientMap.isEmpty()){
 			logger("Broadcast - Kein RaumClient Mapping vorhanden!!");
 		} else {
 			ArrayList<Integer> clientsInChat = roomClientMap.get(room);
 			logger("Broadcast an folgende Clients " + clientsInChat.toString());
 			
-			for(int i = 1; i < clientsInChat.size(); i++){
-	            ClientThread client = clientList.get(i);
-	            
+			for (Integer clientId : clientsInChat) {
+	            ClientThread client = clientList.get(clientId);
+	            System.out.println(client.username);
 	            if(client != null) {
 	            	client.writeMsg(message);
 					if(!client.writeMsg(message)) {
-						removeClient(i); // user war not available remove it
+						removeClient(clientId); // user war not available remove it
 						logger("Disconnected Client " + client.username + " removed from list.");
 					}
 				} 
@@ -249,10 +261,6 @@ public class ChatServer {
 		}
 
 		logger("Client removed!");
-	}
-
-	public boolean isPortInUse(int port) {
-		return (this.port == port);
 	}
 
 	/**
@@ -309,10 +317,9 @@ public class ChatServer {
 			roomClients.add(id);
 			roomClientMap.put(roomList.get(0), roomClients );
 			
-
 			logger("Login successful fuer " + getUsername());
 			logger("Added to General Chatroom" + getUsername());
-			broadcast("Login successful", roomList.get(0), ChatMessage.MESSAGE);
+			broadcast("Hey " + getUsername() +" wilkommen!", roomList.get(0), ChatMessage.MESSAGE);
 
 		}
 
@@ -335,7 +342,7 @@ public class ChatServer {
 				
 				String message = cm.getText();
 				String roomName = cm.getChatRoomName();
-				logger(chatRoom + ": " + getUsername() + " sent following message: " + message);
+				logger(getUsername() + " sent following message: " + message + " to chatroom: " + chatRoom);
 
 				Integer size = null;
 				ChatRoom cr = null;
@@ -367,7 +374,7 @@ public class ChatServer {
 							boolean idInMap = false;
 							ArrayList<Integer> userList = roomClientMap.get(message);
 							size = userList.size();
-							for (int i = 1; i < size; i++) {
+							for (int i = 0; i < size; i++) {
 								if (userList.get(i).equals(id)) {
 									idInMap = true;
 									break;
@@ -513,7 +520,7 @@ public class ChatServer {
 		/*
 		 * Write a String to the Client output stream
 		 */
-		public boolean writeMsg(String message) {
+		protected synchronized boolean writeMsg(String message) {
 			// Check if client is still connected
 			if (!socket.isConnected()) {
 				close();
