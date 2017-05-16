@@ -14,16 +14,15 @@ import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 
-public class ChatServer {
-	// TODO: ask for users in chatroom, protocol? (Send all the static things in
-	// the beginning)
 
+// TODO: Till 	nachricht nich an sich selbst versenden
+// TODO: Till	message type für server aendern
+// TODO: Lovo	funktionen testen
+// TODO: Lovo	Lege eine Worddatei mir inhaltsverzeihnis und notizen
+public class ChatServer {
+	
 	// Base chatroom wher all the users get by first login
 	public static String GENERAL_CHAT_ROOM = "GENERAL";
-
-	// The index on which the chatroom index is saved inside the Integer array
-	// of the roomClientMap
-	public static int CHATROOM_INDEX_POS = 0;
 
 	// Message types for the clients
 	public static String MESSAGE_FROM_OTHER_CLIENT = "##";
@@ -32,32 +31,26 @@ public class ChatServer {
 	public static String ERR_USERNAME = "#####";
 	public static String CHATROOM_LOGOUT = "#####";
 
-	// First initialization of user
-	public static String STANDARD_USER = "STANDARD_USER";
-
 	// Server status: An oder Aus
 	private boolean serverStatus;
-
-	// Server status: An oder Aus
-	private List<ChatRoom> roomList = new ArrayList<>();
-
-	// Romm -> Client Mapping
-	private HashMap<ChatRoom, ArrayList<Integer>> roomClientMap = new HashMap<>();
-
-	// Server status: An oder Aus
-	private List<ClientThread> clientList = new ArrayList<ClientThread>();
-
-	// Port über den die Connection läuft
-	private int port;
-
-	// Server logger
-	static Logger logger;
-
+	
 	// Socket to connect to
 	private ServerSocket serverSocket;
-
-	// ID for the threads
-	private static int uniqueId;
+	
+	// Port über den die Connection läuft
+	private int port;
+	
+	// Server logger
+	static Logger logger;
+	
+	// Server status: An oder Aus
+	private List<ChatRoom> roomList = new ArrayList<>();
+	
+	// Server status: An oder Aus
+	private List<ClientThread> clientList = new ArrayList<ClientThread>();
+	
+	// Room -> Client Mapping
+	private HashMap<ChatRoom, ArrayList<Integer>> roomClientMap = new HashMap<>();
 
 	// Constructor
 	public ChatServer(int port) {
@@ -244,7 +237,7 @@ public class ChatServer {
 		} else {
 			ArrayList<Integer> clientsInChat = roomClientMap.get(room);
 			logger("Broadcast an folgende Clients " + clientsInChat.toString());
-			// TODO nachricht nich an sich selbst versenden
+			
 			for (Integer clientId : clientsInChat) {
 	            ClientThread client = clientList.get(clientId);
 	            

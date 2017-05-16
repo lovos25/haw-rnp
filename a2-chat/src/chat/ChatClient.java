@@ -6,6 +6,10 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Scanner;
 
+//TODO: Correct output when joining a non existent chatroom
+//TODO: Nachrichten zuordnen
+//TODO: Help server zum chat ziehen
+
 public class ChatClient {
     // Messages
     public static String LOGOUT = "LOGOUT";
@@ -207,7 +211,6 @@ public class ChatClient {
                         System.out.println(msg);
                         realMsg = false;
                     } else if(error) {
-                        //TODO: Correct output when joining a nonexistent chatroom
                         System.out.println(msg);
                         chatRoom = oldChatRoom;
                         error = false;
