@@ -372,21 +372,25 @@ public class ChatServer {
 					case ChatMessage.JOIN_CHATROOM:
 						
 						ChatRoom askedRoom = roomList.stream().filter(r -> r.getName().equals(message)).findAny().orElse(null);
+						logger.info("Client " + getUsername() + " moechte eintreten in " + chatRoom.toString());
 						
 						if (roomClientMap.containsKey(askedRoom)) {
+							removeClientFromOtherRoom();
+							
 							chatRoom = askedRoom.toString();
 							ArrayList<Integer> userList = roomClientMap.get(askedRoom);
 							
 							if(!userList.contains(id)) {
 								userList.add(id);
 							} else {
-								sendMessage("Joined already " + chatRoom, chatRoom, ChatMessage.MESSAGE);
+								broadcast("Joined already " + chatRoom, askedRoom, ChatMessage.MESSAGE);
 							}
 							
-							sendMessage("Joined chatroom " + chatRoom, chatRoom, ChatMessage.MESSAGE);
-							List<ChatMessage> messageLog = askedRoom.getMessages(); 
-							for (ChatMessage chatMessage : messageLog) {
-								sendMessage(chatMessage.toString(), chatMessage.getChatRoomName(), chatMessage.getType());
+							broadcast("Joined chatroom " + chatRoom, askedRoom, ChatMessage.MESSAGE);
+							logger.info("Client " + getUsername() + " ist eingetreten in " + chatRoom.toString());
+							
+							for (ChatMessage chatMessage : askedRoom.getMessages()) {
+								broadcast(chatMessage.toString(), askedRoom, chatMessage.getType());
 							}
 							
 						} else {
@@ -409,6 +413,7 @@ public class ChatServer {
 								break;
 							}
 						}
+						removeClientFromOtherRoom();
 						
 						cr = new ChatRoom(message);
 						roomList.add(cr);
@@ -418,9 +423,6 @@ public class ChatServer {
 						
 						roomClientMap.put(cr, usersArray);
 						
-						if (!(chatRoom.equals(GENERAL_CHAT_ROOM)) && roomClientMap.containsKey(chatRoom)) {
-							roomClientMap.get(chatRoom).remove(id);
-						}
 						this.chatRoom = message;
 						// Answer and logging
 						sendMessage("\nConnected to chatroom: " + cr.getName(), roomName, ChatMessage.CREATE_CHATROOM);
@@ -458,6 +460,19 @@ public class ChatServer {
 					}
 			}
 
+		}
+		
+		/**
+		 * Client darf immer nur in einem Room sein
+		 */
+		private void removeClientFromOtherRoom() {
+			for (ArrayList<Integer> clientList : roomClientMap.values()) {
+				if(clientList.contains(id)) {
+					logger.info(username + " Removed from chatroom: " + id);
+					clientList.remove(clientList.indexOf(id));
+				}
+			}
+			
 		}
 
 		private boolean sendMessage(String message, String room, int type) {
