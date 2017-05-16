@@ -304,7 +304,8 @@ public class ChatServer {
 			
 			logger("Login successful fuer " + getUsername());
 			logger("Added to General Chatroom" + getUsername());
-			broadcast("Hey " + getUsername() +" wilkommen!", roomList.get(0), ChatMessage.MESSAGE);
+			
+			broadcast("Hey " + getUsername() +" wilkommen im " + roomList.get(0).getName() + " Room!", roomList.get(0), ChatMessage.MESSAGE);
 
 		}
 
