@@ -234,7 +234,7 @@ public class ChatServer {
 			
 			for (Integer clientId : clientsInChat) {
 	            ClientThread client = clientList.get(clientId);
-	            System.out.println(client.username);
+	            
 	            if(client != null) {
 	            	client.writeMsg(message);
 					if(!client.writeMsg(message)) {
@@ -267,17 +267,16 @@ public class ChatServer {
 	 * Für jeden Client wird ein ClientThread Instance erstellt
 	 */
 	public class ClientThread extends Thread {
-		Socket socket; // the socket where to listen/talk
-		ObjectInputStream sInput; // eingehende Nachricht
+		Socket socket; 				// the socket where to listen/talk
+		ObjectInputStream sInput; 	// eingehende Nachricht
 		ObjectOutputStream sOutput; // aussgehene Nachricht
-		int id; // unique id
+		int id; 					// unique id
 
 		ChatMessage cm; // message type we receive
 		String chatRoom; // the chatroom
 		String username; // the client username
 
 		ClientThread(Socket socket, int index) {
-			// a unique id
 			id = index;
 			this.socket = socket;
 			this.chatRoom = GENERAL_CHAT_ROOM;
@@ -297,20 +296,6 @@ public class ChatServer {
 		}
 
 		private synchronized void initializeUser(ChatMessage message) {
-			boolean initialized = true;
-			
-/*			for (ClientThread clientThread : clientList) {
-				System.out.println("vergleiche " + clientThread.getUsername() + " mit " + message.getText());
-				if (clientThread.getUsername().equals(message.getText())) {
-					logger("Username bereits vergeben");
-					broadcast("Username already taken", roomList.get(0), ChatMessage.ERR_USERNAME);
-					initialized = false;
-					break;
-				}
-			}
-*/
-			
-			//if (initialized) {
 			username = message.getText();
 			
 			ArrayList<Integer> roomClients = roomClientMap.get(roomList.get(0));
@@ -444,7 +429,6 @@ public class ChatServer {
 	
 					// Send message to all users in the chatroom that is specified
 					case ChatMessage.MESSAGE:
-						System.out.println(getRoomByString(roomName).toString() + " msg: " + message);
 						broadcast(message, getRoomByString(roomName), ChatMessage.JOIN_CHATROOM);
 						break;
 					// Logout from the server
