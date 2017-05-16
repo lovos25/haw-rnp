@@ -362,20 +362,21 @@ public class ChatServer {
 						
 						if (roomClientMap.containsKey(askedRoom)) {
 							removeClientFromOtherRoom();
+							this.chatRoom = askedRoom;
 							
-							ArrayList<Integer> userList = roomClientMap.get(askedRoom);
+							ArrayList<Integer> userList = roomClientMap.get(chatRoom);
 							
 							if(!userList.contains(id)) {
 								userList.add(id);
 							} else {
-								broadcast("Joined already " + chatRoom, askedRoom, ChatMessage.MESSAGE);
+								broadcast("Joined already " + chatRoom, chatRoom, ChatMessage.MESSAGE);
 							}
 							
-							broadcast("Joined chatroom " + chatRoom, askedRoom, ChatMessage.MESSAGE);
+							broadcast("Joined chatroom " + chatRoom, chatRoom, ChatMessage.MESSAGE);
 							logger.info("Client " + getUsername() + " ist eingetreten in " + chatRoom.toString());
 							
-							for (ChatMessage chatMessage : askedRoom.getMessages()) {
-								broadcast(chatMessage.toString(), askedRoom, chatMessage.getType());
+							for (ChatMessage chatMessage : chatRoom.getMessages()) {
+								broadcast(chatMessage.toString(), chatRoom, chatMessage.getType());
 							}
 							
 						} else {
@@ -424,12 +425,12 @@ public class ChatServer {
 	
 					// Ask for the current chatroom
 					case ChatMessage.IN_CHATROOM:
-						broadcast(chatRoom.toString(), roomList.get(0), ChatMessage.JOIN_CHATROOM);
+						broadcast(chatRoom.toString(), chatRoom, ChatMessage.JOIN_CHATROOM);
 						break;
 	
 					// Send message to all users in the chatroom that is specified
 					case ChatMessage.MESSAGE:
-						broadcast(message, getRoomByString(roomName), ChatMessage.JOIN_CHATROOM);
+						broadcast(message, chatRoom, ChatMessage.JOIN_CHATROOM);
 						break;
 					// Logout from the server
 					case ChatMessage.LOGOUT:
