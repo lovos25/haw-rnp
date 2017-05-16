@@ -273,13 +273,13 @@ public class ChatServer {
 		int id; 					// unique id
 
 		ChatMessage cm; // message type we receive
-		String chatRoom; // the chatroom
+		ChatRoom chatRoom;
 		String username; // the client username
 
 		ClientThread(Socket socket, int index) {
 			id = index;
 			this.socket = socket;
-			this.chatRoom = GENERAL_CHAT_ROOM;
+			this.chatRoom = roomList.get(0);
 			clientMapList.put(id, this);
 
 			logger("Thread trying to create Object Input/Output Streams");
@@ -337,12 +337,12 @@ public class ChatServer {
 						initializeUser(cm);
 						break;
 					case ChatMessage.HELP_SERVER:
-						sendMessage(help(), chatRoom, ChatMessage.HELP_SERVER);
+						broadcast(help(), chatRoom, ChatMessage.HELP_SERVER);
 						break;
 					case ChatMessage.USERS_IN_CHATROOM:
 						String users = "Chatroom " + chatRoom + ":\n";
 						if (chatRoom.equals(GENERAL_CHAT_ROOM)) {
-							sendMessage(loggedUsers(), chatRoom, ChatMessage.USERS_IN_CHATROOM);
+							broadcast(loggedUsers(), chatRoom, ChatMessage.USERS_IN_CHATROOM);
 							break;
 						}
 	
@@ -363,7 +363,6 @@ public class ChatServer {
 						if (roomClientMap.containsKey(askedRoom)) {
 							removeClientFromOtherRoom();
 							
-							chatRoom = askedRoom.toString();
 							ArrayList<Integer> userList = roomClientMap.get(askedRoom);
 							
 							if(!userList.contains(id)) {
@@ -380,7 +379,7 @@ public class ChatServer {
 							}
 							
 						} else {
-							sendMessage("Error: Chatroom " + message + " does not exist", chatRoom, ChatMessage.ERROR);
+							broadcast("Error: Chatroom " + message + " does not exist", chatRoom, ChatMessage.ERROR);
 						}
 						break;
 	
@@ -395,13 +394,14 @@ public class ChatServer {
 						
 						for (ChatRoom chatroom : roomList) {
 							if (chatroom.getName().equals(message)) {
-								sendMessage("Room name is already taken, please choose another one", GENERAL_CHAT_ROOM, ChatMessage.ERROR);
+								broadcast("Room name is already taken, please choose another one", roomList.get(0), ChatMessage.ERROR);
 								break;
 							}
 						}
 						removeClientFromOtherRoom();
 						
 						cr = new ChatRoom(message);
+						this.chatRoom = cr;
 						roomList.add(cr);
 						
 						ArrayList<Integer> usersArray = new ArrayList<Integer>();
@@ -409,9 +409,8 @@ public class ChatServer {
 						
 						roomClientMap.put(cr, usersArray);
 						
-						this.chatRoom = message;
 						// Answer and logging
-						sendMessage("\nConnected to chatroom: " + cr.getName(), roomName, ChatMessage.CREATE_CHATROOM);
+						broadcast("\nConnected to chatroom: " + cr.getName(), cr, ChatMessage.CREATE_CHATROOM);
 						logger.info("Created chatroom: " + cr.getName());
 						break;
 	
@@ -420,12 +419,12 @@ public class ChatServer {
 						if (roomClientMap.containsKey(roomName)) {
 							roomClientMap.get(roomName).remove(id);
 						}
-						chatRoom = GENERAL_CHAT_ROOM;
+						chatRoom = roomList.get(0);
 						break;
 	
 					// Ask for the current chatroom
 					case ChatMessage.IN_CHATROOM:
-						broadcast(chatRoom, roomList.get(0), ChatMessage.JOIN_CHATROOM);
+						broadcast(chatRoom.toString(), roomList.get(0), ChatMessage.JOIN_CHATROOM);
 						break;
 	
 					// Send message to all users in the chatroom that is specified
