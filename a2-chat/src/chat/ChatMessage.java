@@ -1,7 +1,6 @@
 package chat;
 
 import java.io.Serializable;
-import java.text.SimpleDateFormat;
 
 public class ChatMessage implements Serializable {
 	/**
@@ -21,22 +20,17 @@ public class ChatMessage implements Serializable {
 		IN_CHATROOM = 8,	// chatroom now
 		USERS_IN_CHATROOM = 9, 	// list of users in chatroom
 		ERR_USERNAME = 10, 		// hä
-		INITIALIZE = 11, 		// first register
-		HELP_SERVER = 12;		// help
+		INITIALIZE = 11;		// first register
 	
 	// The different types of message sent by the Client
 	private int type;
 	
 	// The plant text message
 	private String message;
-	
-	// Message belongs to room
-	private String room;
-	
-	public ChatMessage(String message, String room, int type) {
+
+	public ChatMessage(String message, int type){
 		this.message = message;
 		this.type = type;
-		this.room = room;
 	}
 	
 	// getter
@@ -46,9 +40,5 @@ public class ChatMessage implements Serializable {
 
 	public int getType() {
 		return type;
-	}
-
-	public String getChatRoomName() {
-		return room;
 	}
 }
