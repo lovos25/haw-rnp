@@ -1,7 +1,6 @@
 package chat;
 
 import java.io.Serializable;
-import java.text.SimpleDateFormat;
 
 public class ChatMessage implements Serializable {
 	/**
@@ -37,6 +36,12 @@ public class ChatMessage implements Serializable {
 		this.message = message;
 		this.type = type;
 		this.room = room;
+	}
+
+	public ChatMessage(String message, int type){
+		this.message = message;
+		this.type = type;
+		this.room = ChatServer.GENERAL_CHAT_ROOM;
 	}
 	
 	// getter
