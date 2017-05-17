@@ -7,8 +7,6 @@ import java.util.ArrayList;
 import java.util.Scanner;
 
 //TODO: Correct output when joining a non existent chatroom
-//TODO: Nachrichten zuordnen
-//TODO: Help server zum chat ziehen
 
 public class ChatClient {
     // Messages
@@ -19,7 +17,7 @@ public class ChatClient {
     public final static String CREATE_CHATROOM = "CREATE";
     public final static String JOIN = "JOIN";
     public final static String IN_CHATROOM = "CURCHAT";
-    public final static String USERS_IN_CHATROOM = "CHASTUSERS";
+    public final static String USERS_IN_CHATROOM = "CHATUSERS";
     public final static String HELP_SERVER = "HELPME";
     // for I/O
     private ObjectInputStream sInput;       // to read from the socket
@@ -28,8 +26,6 @@ public class ChatClient {
     private Socket socket;
 
     ArrayList<Integer> serverList;
-    String chatRoom = ChatServer.GENERAL_CHAT_ROOM;
-    String oldChatRoom = ChatServer.GENERAL_CHAT_ROOM;
     boolean runningClient = true;
 
     public ChatClient(){
@@ -38,6 +34,7 @@ public class ChatClient {
     public void start(){
         Scanner scan = new Scanner(System.in);
         while(runningClient) {
+            System.out.print(" > ");
             // read message from user
             String msg = scan.nextLine();
             String roomname = "Empty";
@@ -74,11 +71,7 @@ public class ChatClient {
 	                } catch (IOException e) {
 	                    e.printStackTrace();
 	                }
-	                // Set roomname if message could be sent
-	                if (sendMessage(roomname, ChatMessage.CREATE_CHATROOM)) {
-	                    oldChatRoom = chatRoom;
-	                    chatRoom = roomname;
-	                }
+	                sendMessage(roomname, ChatMessage.CREATE_CHATROOM);
 	                break;
 	            case JOIN:
 	            	getChatrooms();
@@ -91,12 +84,9 @@ public class ChatClient {
 	                }
                     // TODO: Chatroom gets written here but is wrong if the chatroom does not exist!
 	                sendMessage(roomname, ChatMessage.JOIN_CHATROOM);
-	                oldChatRoom = chatRoom;
-	                chatRoom = roomname;
 	                break;
 	            default:
-	            	System.out.print(chatRoom.toString() + " > ");
-	            	sendMessage(msg, chatRoom, ChatMessage.MESSAGE);
+	            	sendMessage(msg, ChatMessage.MESSAGE);
 	            	break;
             }
 
@@ -191,9 +181,6 @@ public class ChatClient {
                 "\n ### End ###\n";
 
         System.out.println(helpString);
-        if(!initialization) {
-            System.out.print(chatRoom.toString() + " > ");
-        }
     }
 
     private void logoutRoom() {
@@ -218,34 +205,18 @@ public class ChatClient {
         return false;
     }
 
-    public boolean sendMessage(String message, String room, int type) {
-        ChatMessage cm = new ChatMessage(message, room, type);
-
-        try {
-            sOutput.writeObject(cm);
-            return true;
-        } catch(IOException e) {
-            e.printStackTrace();
-        }
-        return false;
-    }
-
     class ListenFromServer extends Thread {
-        boolean realMsg = false;
-        private boolean serverCall = false;
-        private boolean error = false;
         public boolean running = true;
-        private boolean username_error = false;
-        
+
         public void run() {
             while(running) {
                 try {
                     String msg = (String) sInput.readObject();
                     System.out.println(msg);
-                    System.out.print(chatRoom.toString() + " > ");
+                    System.out.print(" > ");
                 } catch (IOException e) {
                     running = false;
-                    e.printStackTrace();
+                    System.out.println("@Socket Connection has been closed");
                 } catch (ClassNotFoundException e) {
                     e.printStackTrace();
                 }
