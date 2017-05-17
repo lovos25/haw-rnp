@@ -6,30 +6,21 @@ import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 
 
-// TODO: Till 	nachricht nich an sich selbst versenden
+// TODO: Till 	nachricht nich an sich selbst versenden - Done
 // TODO: Till	message type für server aendern
 // TODO: Lovo	funktionen testen
 // TODO: Lovo	Lege eine Worddatei mir inhaltsverzeihnis und notizen
 public class ChatServer {
 	
 	// Base chatroom wher all the users get by first login
-	public static String GENERAL_CHAT_ROOM = "GENERAL";
-
-	// Message types for the clients
-	public static String MESSAGE_FROM_OTHER_CLIENT = "##";
-	public static String SERVER_CALL = "################";
-	public static String ERROR = "####";
-	public static String ERR_USERNAME = "#####";
-	public static String CHATROOM_LOGOUT = "#####";
+	public static String GENERAL_CHAT_ROOM = "General";
 
 	// Server status: An oder Aus
 	private boolean serverStatus;
@@ -155,21 +146,6 @@ public class ChatServer {
 		clientList.add(clientThread);
 		clientThread.start();
     }
-	
-	/**
-	 * Help
-	 * @return
-	 */
-	public String help() {
-		String help = "########     help_server:    ##########\n" + "show this help\n"
-				+ "logout: Logout from the server\n" + "logout_room: Logout from current chatroom to General\n"
-				+ "in_chatroom: Show in which chatroom you are currently in\n"
-				+ "users_in_chatroom: list all users in current chatroom\n"
-				+ "list_users: list all users on the server\n"
-				+ "list_chatrooms: list all chatrooms on the server\ncreate_chatroom: create chatroom with given name\n"
-				+ "join: join given chatroom";
-		return help;
-	}
 
 	/**
 	 * We want to have a small group of users but the ids always near each other
@@ -229,48 +205,60 @@ public class ChatServer {
 	 * @param type		Nachrichten Typ
 	 * @return boolean 	True bei erfolgreichem Versand, sonst false			
 	 */
-	private synchronized boolean broadcast(String message, ChatRoom room, int type) {
+	private synchronized boolean broadcast(String message, ChatRoom room, int type, int sendingClientId) {
 		logger("Broadcast - Nachricht wird verbreitet!");
 		
 		if(roomClientMap.isEmpty()){
 			logger("Broadcast - Kein RaumClient Mapping vorhanden!!");
-		} else {
-			ArrayList<Integer> clientsInChat = roomClientMap.get(room);
-			logger("Broadcast an folgende Clients " + clientsInChat.toString());
-			
-			for (Integer clientId : clientsInChat) {
-	            ClientThread client = clientList.get(clientId);
-	            
-	            if(client != null) {
-	            	client.writeMsg(message);
-	            	
-					if(!client.writeMsg(message)) {
-						disconnectClient(clientId, room); // user war not available remove it
-						logger("Disconnected Client " + client.username + " removed from list.");
-					}
-				} 
-	            
-	        }
-		}
-		
-		return true;
-	}
-	
+        // Es wird nichts vom GENERAL chat zu anderen Clients gesendet
+		} else if(room == roomList.get(0) && type == ChatMessage.MESSAGE) {
+            logger("Broadcast - Im General Chatroom, Nachricht wird nicht versendet");
+        } else {
+            ArrayList<Integer> clientsInChat = roomClientMap.get(room);
+            logger("Broadcast an folgende Clients " + clientsInChat.toString());
+
+            // Nur wenn die message eine MESSAGE ist, wird es an andere gesendet
+            if(type == ChatMessage.MESSAGE) {
+                ClientThread sendingClient = clientList.get(sendingClientId);
+                room.logMessage(new ChatMessage(sendingClient.getUsername() + " > " + message,room.getName(),sendingClientId));
+                for (Integer clientId : clientsInChat) {
+                    // Der Client soll die Nachricht nicht an sich selbst senden
+                    if (sendingClientId != clientId) {
+                        ClientThread client = clientList.get(clientId);
+                        if (client != null) {
+                            // Neuer String, sonds addieren die sich alle
+                            String messageToSent = sendingClient.getUsername() + " > " + message;
+                            boolean messageSent = client.writeMsg(messageToSent);
+
+                            if (!messageSent) {
+                                disconnectClient(clientId, room); // Benutzer war nicht verfuegbar, wird geloescht
+                                logger("Disconnected Client " + client.username + " removed from list.");
+                            }
+                        }
+                    }
+                }
+            //Falls der Nachrichtentyp nicht MESSAGE ist, wird das Ergebnis einfach an den sender gesendet
+            } else {
+                clientList.get(sendingClientId).writeMsg(message);
+            }
+        }
+        return true;
+    }
+
 	/**
 	 * Client nicht mehr verfuegbar, sodass die Verbindung geschlossen wird
-	 * @param i
+	 * @param clientId
 	 */
 	private synchronized void disconnectClient(int clientId, ChatRoom room) {
 		removeClientFromRoom(clientId, room);
 		clientList.get(clientId).close();
 		clientList.remove(clientId);
-		
 	}
 	
 	/**
 	 * Client loggt sich aus einem Chatroom aus, 
 	 * sodass er aus der RoomClientMap geloescht werden muss
-	 * @param i
+	 * @param clientId
 	 */
 	protected synchronized void removeClientFromRoom(int clientId, ChatRoom room) {
 		System.out.println(roomClientMap.toString());
@@ -281,7 +269,53 @@ public class ChatServer {
 			roomClientIDs.remove(roomClientIDs.indexOf(clientId));
 			logger.info("Erledigt " + clientId + " loeschen aus " + room.toString());
 		}
+        // Loesche Chatroom falls er empty ist für
+        if(roomClientIDs.isEmpty() && room != roomList.get(0)){
+            roomClientMap.remove(room);
+        }
 	}
+
+    /**
+     * Sendet neuen clients das log des chatrooms (max 50)
+     * @param chatRoom
+     * @param clientId
+     */
+    protected synchronized void broadcastChatRoomLog(ChatRoom chatRoom, int clientId){
+        logger("Broadcasting chatroom log to new client in: " + chatRoom.getName());
+        String log = "#Log#\n";
+        if(chatRoom.getMessages().isEmpty()){
+            // Wir machen nichts, sonst kommt da eine leere Nachricht an
+        }else {
+            for (ChatMessage chatMessage : chatRoom.getMessages()) {
+                log += chatMessage.getText() + "\n";
+            }
+            System.out.println(log);
+            ClientThread client = clientList.get(clientId);
+            client.writeMsg(log);
+        }
+    }
+
+    /**
+     * Der Client wird dem chatroom hinzugefügt und aus dem alten entfernt
+     * @param clientId
+     * @param room
+     * @param previousRoom
+     */
+    protected synchronized void addClientToRoom(int clientId, ChatRoom room, ChatRoom previousRoom){
+        removeClientFromRoom(clientId, previousRoom);
+        ClientThread client = clientList.get(clientId);
+        if(client != null) {
+            client.chatRoom = room;
+
+            ArrayList<Integer> userList = roomClientMap.get(room);
+
+            if (!userList.contains(clientId)) {
+                userList.add(clientId);
+            } else {
+                client.writeMsg("Joined already " + room);
+            }
+        }
+    }
 	
 	/**
 	 * Den Client bei general Chat beitreten lassen 
@@ -289,7 +323,7 @@ public class ChatServer {
 	 */
 	protected synchronized void addClientToGeneral(int clientId) {
 		ArrayList<Integer> clientIds = roomClientMap.get(roomList.get(0));
-		
+		System.out.println(clientIds.toString());
 		if(! clientIds.contains(clientId)) {
 			clientIds.add(clientId);
 			//roomClientMap.put(roomList.get(0), clientIds);
@@ -299,7 +333,7 @@ public class ChatServer {
 	}
 
 	/**
-	 * Für jeden Client wird ein ClientThread Instance erstellt
+	 * Für jeden Client wird eine ClientThread Instance erstellt
 	 */
 	public class ClientThread extends Thread {
 		Socket socket; 				// the socket where to listen/talk
@@ -326,7 +360,7 @@ public class ChatServer {
 				e.printStackTrace();
 			}
 
-			logger.info("Initialized ClientThread " + getUsername());
+			logger.info("Initialized ClientThread with ID: " + id);
 		}
 
 		private synchronized void initializeUser(ChatMessage message) {
@@ -337,13 +371,12 @@ public class ChatServer {
 			logger("Login successful fuer " + getUsername());
 			logger("Added to General Chatroom" + getUsername());
 			
-			broadcast("Hey " + getUsername() +" wilkommen im " + roomList.get(0).getName() + " Room!", roomList.get(0), ChatMessage.MESSAGE);
-
+			broadcast("Hey " + getUsername() +" wilkommen im " + roomList.get(0).getName() + " Room!", roomList.get(0), ChatMessage.INITIALIZE, id);
 		}
 
 		@Override
 		public void run() {
-			logger.info("ClientThread " + getUsername() + " started");
+			logger.info("ClientThread " + getUsername() + " wurde gestartet");
 			boolean running = true;
 			
 			while (running) {
@@ -359,7 +392,6 @@ public class ChatServer {
 				}
 				
 				String message = cm.getText();
-				logger(getUsername() + " sent following message: " + message + " to chatroom: " + chatRoom);
 
 				Integer size = null;
 				ChatRoom cr = null;
@@ -369,30 +401,25 @@ public class ChatServer {
 						initializeUser(cm);
 						break;
 
-					// call help 
-					case ChatMessage.HELP_SERVER:
-						broadcast(help(), chatRoom, ChatMessage.MESSAGE);
-						break;
-					
 					// List of Users in Chatroom
 					case ChatMessage.USERS_IN_CHATROOM:
 						
 						String users = "Chatroom " + chatRoom + ":\n";
 						if (chatRoom.equals(GENERAL_CHAT_ROOM)) {
-							broadcast(getClientListString(chatRoom), chatRoom, ChatMessage.MESSAGE);
+							broadcast(getClientListString(chatRoom), chatRoom, ChatMessage.USERS_IN_CHATROOM, id);
 							break;
 						}
 	
 						break;
 						
 					case ChatMessage.LIST_USERS:
-						broadcast(getClientListString(), chatRoom, ChatMessage.MESSAGE);
+						broadcast(getClientListString(), chatRoom, ChatMessage.LIST_USERS, id);
 						break;
 						
 					// List all the available chatrooms
 					case ChatMessage.LIST_CHATROOMS:
-						broadcast(roomList.toString(), chatRoom, ChatMessage.LIST_CHATROOMS);
-						logger.info("Listed server for " + getUsername());
+						broadcast(roomList.toString(), chatRoom, ChatMessage.LIST_CHATROOMS, id);
+						logger.info("Chatrooms auf dem Server aufgelistet fuer " + getUsername());
 						break;
 						
 
@@ -400,30 +427,19 @@ public class ChatServer {
 					case ChatMessage.JOIN_CHATROOM:
 						
 						ChatRoom askedRoom = getRoomByString(message);
-						logger.info("Client " + getUsername() + " moechte eintreten in " + askedRoom.toString());
 						
 						if (roomClientMap.containsKey(askedRoom)) {
-							removeClientFromRoom(id, chatRoom);
-							
-							chatRoom = askedRoom;
-							
-							ArrayList<Integer> userList = roomClientMap.get(chatRoom);
-							
-							if(!userList.contains(id)) {
-								userList.add(id);
-							} else {
-								broadcast("Joined already " + chatRoom, chatRoom, ChatMessage.MESSAGE);
-							}
-							
-							broadcast("Joined chatroom " + chatRoom, chatRoom, ChatMessage.MESSAGE);
+                            logger.info("Client " + getUsername() + " moechte eintreten in " + askedRoom.toString());
+                            // Client zum neuen chatRoom hinzufügen
+                            addClientToRoom(id, askedRoom, chatRoom);
+
+							broadcast("Joined chatroom " + chatRoom, chatRoom, ChatMessage.JOIN_CHATROOM, id);
 							logger.info("Client " + getUsername() + " ist eingetreten in " + chatRoom.toString());
-							
-							for (ChatMessage chatMessage : chatRoom.getMessages()) {
-								broadcast(chatMessage.toString(), chatRoom, chatMessage.getType());
-							}
+
+                            broadcastChatRoomLog(chatRoom, id);
 							
 						} else {
-							broadcast("Error: Chatroom " + message + " does not exist", chatRoom, ChatMessage.ERROR);
+							broadcast("Error: Chatroom " + message + " does not exist", chatRoom, ChatMessage.ERROR, id);
 						}
 						break;
 	
@@ -432,7 +448,7 @@ public class ChatServer {
 						
 						for (ChatRoom chatroom : roomList) {
 							if (chatroom.getName().equals(message)) {
-								broadcast("Room name is already taken, please choose another one", roomList.get(0), ChatMessage.ERROR);
+								broadcast("Room name is already taken, please choose another one", roomList.get(0), ChatMessage.ERROR, id);
 								break;
 							}
 						}
@@ -448,7 +464,7 @@ public class ChatServer {
 						roomClientMap.put(cr, usersArray);
 						
 						// Answer and logging
-						broadcast("\nConnected to chatroom: " + cr.getName(), cr, ChatMessage.CREATE_CHATROOM);
+						broadcast("Connected to chatroom: " + cr.getName(), cr, ChatMessage.CREATE_CHATROOM, id);
 						logger.info("Created chatroom: " + cr.getName());
 						break;
 	
@@ -457,24 +473,22 @@ public class ChatServer {
 						removeClientFromRoom(id, chatRoom);
 						addClientToGeneral(id);
 						logger.info("Joined chatroom: " + chatRoom.getName());
-						
 						break;
 	
 					// Ask for the current chatroom
 					case ChatMessage.IN_CHATROOM:
-						broadcast(chatRoom.toString(), chatRoom, ChatMessage.MESSAGE);
+						broadcast(chatRoom.toString(), chatRoom, ChatMessage.IN_CHATROOM, id);
 						break;
 	
 					// Send message to all users in the chatroom that is specified
 					case ChatMessage.MESSAGE:
-						broadcast(message, chatRoom, ChatMessage.MESSAGE);
+						broadcast(message, chatRoom, ChatMessage.MESSAGE, id);
 						break;
 						
 					// Logout from the server
 					case ChatMessage.LOGOUT:
 						disconnectClient(id, chatRoom);
 						running = false;
-						
 						break;
 					}
 			}
@@ -483,7 +497,7 @@ public class ChatServer {
 		
 		public ChatRoom getRoomByString(String sRoom) {
 			return roomList.stream().filter(r -> r.getName().equals(sRoom))
-					.findAny().orElse(roomList.get(0));
+					.findAny().orElse(null);
 		}
 
 		public int getClientId() {
