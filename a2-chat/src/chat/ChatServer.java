@@ -203,9 +203,9 @@ public class ChatServer {
 	 * @param message	die Nachricht fuer den Emfaenger
 	 * @param room		Raum für den die Nachricht bestimmt ist
 	 * @param type		Nachrichten Typ
-     * @param toSelf    wenn die Nachricht nur für den client ist
 	 * @return boolean 	True bei erfolgreichem Versand, sonst false			
 	 */
+
 	private synchronized boolean broadcast(String message, ChatRoom room, int type, int sendingClientId) {
 		logger("Broadcast - Nachricht wird verbreitet!");
 		
@@ -405,7 +405,6 @@ public class ChatServer {
 						initializeUser(cm);
 						break;
 
-					// List of Users in Chatroom
 					case ChatMessage.USERS_IN_CHATROOM:
 						if (chatRoom.equals(GENERAL_CHAT_ROOM)) {
 							broadcast(getClientListString(chatRoom), chatRoom, ChatMessage.USERS_IN_CHATROOM, id);

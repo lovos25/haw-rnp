@@ -19,6 +19,7 @@ public class ChatClient {
     public final static String IN_CHATROOM = "CURCHAT";
     public final static String USERS_IN_CHATROOM = "CHATUSERS";
     public final static String HELP_SERVER = "HELPME";
+
     // for I/O
     private ObjectInputStream sInput;       // to read from the socket
     private ObjectOutputStream sOutput;     // to write on the socket
