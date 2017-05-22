@@ -20,6 +20,21 @@ public class ChatClient {
     public final static String USERS_IN_CHATROOM = "CHATUSERS";
     public final static String HELP_SERVER = "HELPME";
 
+    // Alle Nachrichtentypen die der Server akzeptiert
+    private static final int
+            LOGOUT_CM = 0, 		// logout from room
+            MESSAGE_CM = 1, 		// send message
+            LIST_USERS_CM = 2, 	// list of users
+            JOIN_CHATROOM_CM = 3, 	// join a chat room
+            LIST_CHATROOMS_CM = 4, // list of avalible chatroms
+            CHATROOM_LOGOUT_CM = 5,// logout from chatroom
+            CREATE_CHATROOM_CM = 6,// create chatrrom
+            ERROR_CM = 7, 			// fehler
+            IN_CHATROOM_CM = 8,	// chatroom now
+            USERS_IN_CHATROOM_CM = 9, 	// list of users in chatroom
+            ERR_USERNAME_CM = 10, 		// hä
+            INITIALIZE_CM = 11;		// first register
+
     // for I/O
     private ObjectInputStream sInput;       // to read from the socket
     private ObjectOutputStream sOutput;     // to write on the socket
@@ -52,13 +67,13 @@ public class ChatClient {
 	            	logoutRoom();
 	            	break;
 	            case IN_CHATROOM:
-	            	sendMessage("which chatroom am I in?", ChatMessage.IN_CHATROOM);
+	            	sendMessage("which chatroom am I in?", IN_CHATROOM_CM);
 	            	break;
 	            case USERS_IN_CHATROOM:
-	                sendMessage("which chatroom am I in?", ChatMessage.USERS_IN_CHATROOM);
+	                sendMessage("which chatroom am I in?", USERS_IN_CHATROOM_CM);
 	            	break;
 	            case LIST_USERS:
-                    sendMessage(username + " requesting list of users", ChatMessage.LIST_USERS);
+                    sendMessage(username + " requesting list of users", LIST_USERS_CM);
 	            	break;
 	            case LIST_CHATROOMS:
 	            	getChatrooms();
@@ -72,7 +87,7 @@ public class ChatClient {
 	                } catch (IOException e) {
 	                    e.printStackTrace();
 	                }
-	                sendMessage(roomname, ChatMessage.CREATE_CHATROOM);
+	                sendMessage(roomname, CREATE_CHATROOM_CM);
 	                break;
 	            case JOIN:
 	            	getChatrooms();
@@ -84,10 +99,10 @@ public class ChatClient {
 	                    e.printStackTrace();
 	                }
                     // TODO: Chatroom gets written here but is wrong if the chatroom does not exist!
-	                sendMessage(roomname, ChatMessage.JOIN_CHATROOM);
+	                sendMessage(roomname, JOIN_CHATROOM_CM);
 	                break;
 	            default:
-	            	sendMessage(msg, ChatMessage.MESSAGE);
+	            	sendMessage(msg, MESSAGE_CM);
 	            	break;
             }
 
@@ -95,7 +110,7 @@ public class ChatClient {
     }
     
     public void getChatrooms() {
-    	sendMessage(username + " requesting list of chatrooms", ChatMessage.LIST_CHATROOMS);
+    	sendMessage(username + " requesting list of chatrooms", LIST_CHATROOMS_CM);
     }
 
     public boolean login(String server, int serverPort){
@@ -132,7 +147,7 @@ public class ChatClient {
             System.out.print("Username eingeben > ");
             BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
             username = br.readLine();
-            sendMessage(username, ChatMessage.INITIALIZE);
+            sendMessage(username, INITIALIZE_CM);
         
             System.out.println("@Username saved and logged in");
             printHelp(true);
@@ -145,7 +160,7 @@ public class ChatClient {
     
     private void logout() {
         if(sOutput != null && socket != null ) {
-            sendMessage("", ChatMessage.LOGOUT);
+            sendMessage("", LOGOUT_CM);
         }
 
         try {
@@ -185,12 +200,12 @@ public class ChatClient {
     }
 
     private void logoutRoom() {
-    	boolean msg = sendMessage("", ChatMessage.CHATROOM_LOGOUT);
+    	boolean msg = sendMessage("", CHATROOM_LOGOUT_CM);
     	
     	if(msg) {
-    		System.out.println("Logout war Erfolgreich");
+    		System.out.println("Logout was successfull");
     	} else {
-    		System.out.println("Logout war nicht Erfolgreich");
+    		System.out.println("Logout was not successfull");
     	}
     }
     
