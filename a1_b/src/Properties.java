@@ -7,7 +7,7 @@ import java.util.Base64;
 import java.util.logging.Logger;
 
 class Properties {
-	String filePath = "/Users/LovelyKaur/workspace/haw-rnp/a1_b/src/EmailData.txt";
+	String filePath = "D:\\Git-Repos\\haw-rnp\\a1_b\\src\\EmailData.txt";
 	
     // Sender
     String senderUsername = "";
