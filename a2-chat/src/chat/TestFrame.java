@@ -1,4 +1,4 @@
-package chat;
+package src.chat;
 
 /**
  * Created by Zujiry on 01/05/2017.

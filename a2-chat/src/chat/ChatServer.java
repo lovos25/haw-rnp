@@ -1,4 +1,4 @@
-package chat;
+package src.chat;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -49,7 +49,7 @@ public class ChatServer {
 
 		this.port = port;
 
-		// Erstelle eine general chat room
+		// Erstelle einen generellen chat room
 		ChatRoom generalChatRoom = new ChatRoom(GENERAL_CHAT_ROOM);
 		this.roomList.add(generalChatRoom);
 		this.roomClientMap.put(generalChatRoom, new ArrayList<Integer>());
@@ -65,7 +65,7 @@ public class ChatServer {
 		ChatServer.logger = Logger.getLogger("ServerLogger");
 
 		try {
-			FileHandler fileHandler = new FileHandler(System.getProperty("user.dir") + "//logging//ServerLog.log");
+			FileHandler fileHandler = new FileHandler(System.getProperty("user.dir") + "\\logging\\ServerLog.log");
 			logger.addHandler(fileHandler);
 			SimpleFormatter sf = new SimpleFormatter();
 			fileHandler.setFormatter(sf);
@@ -77,7 +77,7 @@ public class ChatServer {
 	}
 
 	/**
-	 * Die Socketverbindung wir hier implimentiert
+	 * Die Socketverbindung wir hier implementiert
 	 * 
 	 * @throws IOException
 	 */
@@ -203,6 +203,7 @@ public class ChatServer {
 	 * @param message	die Nachricht fuer den Emfaenger
 	 * @param room		Raum für den die Nachricht bestimmt ist
 	 * @param type		Nachrichten Typ
+     * @param toSelf    wenn die Nachricht nur für den client ist
 	 * @return boolean 	True bei erfolgreichem Versand, sonst false			
 	 */
 	private synchronized boolean broadcast(String message, ChatRoom room, int type, int sendingClientId) {
@@ -396,6 +397,8 @@ public class ChatServer {
 
 				Integer size = null;
 				ChatRoom cr = null;
+
+				// The switch case for the various message types sent by the current client
 				switch (cm.getType()) {
 					// Intialize User
 					case ChatMessage.INITIALIZE:
