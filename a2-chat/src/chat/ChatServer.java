@@ -196,7 +196,7 @@ public class ChatServer {
 	 * @return
 	 */
 	public String getClientListString() {
-		String userList = "";
+		String userList = "All users on the server:\n";
 
 		synchronized (clientList) {
 			for (ClientThread client : clientList) {
@@ -334,7 +334,7 @@ public class ChatServer {
      */
     protected synchronized void broadcastChatRoomLog(ChatRoom chatRoom, int clientId){
         logger("Broadcasting chatroom log to new client in: " + chatRoom.getName());
-        String log = "#Log#\n";
+        String log = "# Log #\n";
         synchronized (clientList) {
 			if (chatRoom.getMessages().isEmpty()) {
 				// Wir machen nichts, sonst kommt da eine leere Nachricht an
