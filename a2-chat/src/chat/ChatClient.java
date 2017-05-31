@@ -44,6 +44,11 @@ public class ChatClient {
     ArrayList<Integer> serverList;
     boolean runningClient = true;
 
+    public static void main(String[] args) {
+        ChatClient client = new ChatClient();
+        client.login("localhost",50000);
+    }
+
     public ChatClient(){
     }
 
@@ -54,9 +59,8 @@ public class ChatClient {
             // read message from user
             String msg = scan.nextLine();
             String roomname = "Empty";
-            
+            if(!runningClient)break;
             switch (msg.toUpperCase()) {
-
                 case HELP_SERVER:
                     printHelp(false);
                     break;
@@ -98,7 +102,6 @@ public class ChatClient {
 	                } catch (IOException e) {
 	                    e.printStackTrace();
 	                }
-                    // TODO: Chatroom gets written here but is wrong if the chatroom does not exist!
 	                sendMessage(roomname, JOIN_CHATROOM_CM);
 	                break;
 	            default:
@@ -216,7 +219,7 @@ public class ChatClient {
             sOutput.writeObject(cm);
             return true;
         } catch(IOException e) {
-            e.printStackTrace();
+            System.out.println("@Server closed the connection");
         }
         return false;
     }
@@ -232,6 +235,8 @@ public class ChatClient {
                     System.out.print(" > ");
                 } catch (IOException e) {
                     running = false;
+                    runningClient = false;
+                    logout();
                     System.out.println("@Socket Connection has been closed");
                 } catch (ClassNotFoundException e) {
                     e.printStackTrace();
