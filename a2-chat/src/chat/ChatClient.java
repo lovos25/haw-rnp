@@ -36,8 +36,10 @@ public class ChatClient {
             INITIALIZE_CM = 11;		// first register
 
     // for I/O
-    private ObjectInputStream sInput;       // to read from the socket
-    private ObjectOutputStream sOutput;     // to write on the socket
+    //private ObjectInputStream sInput;       // to read from the socket
+    //private ObjectOutputStream sOutput;     // to write on the socket
+    private OutputStream outputStream;  // to write on the socket
+    private InputStream inputStream;    // to read from the socket
     private String username;
     private Socket socket;
 
@@ -128,8 +130,8 @@ public class ChatClient {
         }
 
         try {
-            sInput  = new ObjectInputStream(socket.getInputStream());
-            sOutput = new ObjectOutputStream(socket.getOutputStream());
+            outputStream = socket.getOutputStream();
+            inputStream = socket.getInputStream();
         } catch (IOException eIO) {
             System.out.println("Exception creating new Input/output Streams: " + eIO);
             return false;
@@ -162,18 +164,18 @@ public class ChatClient {
     }
     
     private void logout() {
-        if(sOutput != null && socket != null ) {
+        if(outputStream != null && socket != null ) {
             sendMessage("", LOGOUT_CM);
         }
 
         try {
-            if(sInput != null)
-                sInput.close();
+            if(inputStream != null)
+                inputStream.close();
         } catch(Exception e) {}
         
         try {
-            if(sOutput != null)
-                sOutput.close();
+            if(outputStream != null)
+                outputStream.close();
         } catch(Exception e) {}
 
         try{
@@ -216,7 +218,9 @@ public class ChatClient {
         ChatMessage cm = new ChatMessage(message, type);
 
         try {
-            sOutput.writeObject(cm);
+            outputStream.write(type);
+            outputStream.write(message.getBytes().length);
+            outputStream.write(message.getBytes());
             return true;
         } catch(IOException e) {
             System.out.println("@Server closed the connection");
@@ -226,20 +230,25 @@ public class ChatClient {
 
     class ListenFromServer extends Thread {
         public boolean running = true;
-
+        int length = 0;
+        byte[] messageBytes;
+        String message;
         public void run() {
             while(running) {
                 try {
-                    String msg = (String) sInput.readObject();
-                    System.out.println(msg);
+                    length = inputStream.read();
+                    messageBytes = new byte[length];
+                    inputStream.read(messageBytes);
+                    message = new String(messageBytes);
+                    System.out.println(message);
                     System.out.print(" > ");
                 } catch (IOException e) {
                     running = false;
                     runningClient = false;
                     logout();
                     System.out.println("@Socket Connection has been closed");
-                } catch (ClassNotFoundException e) {
-                    e.printStackTrace();
+                } catch (NegativeArraySizeException e) {
+                    System.out.println("@Socket connection has been closed");
                 }
             }
         }
