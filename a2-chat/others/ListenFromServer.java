@@ -15,11 +15,13 @@ public class ListenFromServer extends Thread {
         while(running) {
             try {
                 String msg = iStream.readLine();
+                if(msg.isEmpty()){
+                    System.out.println("You left the server");
+                    running = false;
+                }
                 System.out.println(msg);
-                System.out.print(" > ");
             } catch (IOException e) {
                 running = false;
-                
                 System.out.println("@Socket Connection has been closed");
             }
         }
