@@ -1,0 +1,5 @@
+#PING 192.168.17.17 (192.168.17.17) 1000(1028) bytes of data.
+#From 192.168.18.1 icmp_seq=1 Frag needed and DF set (mtu = 786)
+
+#--- 192.168.17.17 ping statistics ---
+#1 packets transmitted, 0 received, +1 errors, 100% packet loss, time 0ms
