@@ -1,8 +1,6 @@
 package src.chat;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -401,11 +399,11 @@ public class ChatServer {
 	 */
 	public class ClientThread extends Thread {
 		Socket socket; 				// the socket where to listen/talk
-		ObjectInputStream sInput; 	// eingehende Nachricht
-		ObjectOutputStream sOutput; // aussgehene Nachricht
+		InputStream sInput;  // eingehende Nachricht
+		OutputStream sOutput;// aussgehene Nachricht
 		int id; 					// unique id
 
-		ChatMessage cm; // message type we receive
+		//ChatMessage cm; // message type we receive
 		ChatRoom chatRoom;
 		String username; // the client username
 
@@ -418,8 +416,8 @@ public class ChatServer {
 
 			logger("Thread trying to create Object Input/Output Streams");
 			try {
-				sOutput = new ObjectOutputStream(socket.getOutputStream());
-				sInput = new ObjectInputStream(socket.getInputStream());
+				sInput = socket.getInputStream();
+				sOutput = socket.getOutputStream();
 
 			} catch (IOException e) {
 				logger("Exception beim Erstellen von new Input/output Streams: " + e);
@@ -433,8 +431,8 @@ public class ChatServer {
          * Initialisiert den neuen Client auf dem Server
          * @param message
          */
-		private synchronized void initializeUser(ChatMessage message) {
-			username = message.getText();
+		private synchronized void initializeUser(String message) {
+			username = message;
 			
 			addClientToGeneral(id);
 			
@@ -449,31 +447,35 @@ public class ChatServer {
 		public void run() {
 			logger.info("ClientThread " + getUsername() + " wurde gestartet");
 			boolean running = true;
+			int type = 100;
+			int length = 0;
 			
 			while (running) {
+				byte[] messageBytes;
 				try {
 					socket.setSoTimeout(USER_TIMEOUT);
-					cm = (ChatMessage) sInput.readObject();
+					type = sInput.read();					//cm = (ChatMessage) sInput.readObject();
+					length = sInput.read();
+					messageBytes = new byte[length];
+					sInput.read(messageBytes);
 				} catch (IOException e) {
 					logger("ClientThread " + getUsername() + " wurde geschlossen");
 					disconnectClient(id,chatRoom);
 					close();
 					break;
-				} catch (ClassNotFoundException e) {
-					logger("ClientThread " + getUsername() + " closed");
-					e.printStackTrace();
 				}
 
-				String message = cm.getText();
+				String message = new String(messageBytes);
+				//String message = cm.getText();
 
 				Integer size = null;
 				ChatRoom cr = null;
 
 				// The switch case for the various message types sent by the current client
-				switch (cm.getType()) {
+				switch (type) {
 					// Intialize User
 					case INITIALIZE:
-						initializeUser(cm);
+						initializeUser(message);
 						break;
 
 					case USERS_IN_CHATROOM:
@@ -581,10 +583,6 @@ public class ChatServer {
 			}
 		}
 
-		public int getClientId() {
-			return id;
-		}
-
 		public String getUsername() {
 			return username;
 		}
@@ -602,7 +600,8 @@ public class ChatServer {
 			// send the message to client
 			try {
 				logger("Nachricht an " + username + " wurde versendet!");
-				sOutput.writeObject(message);
+				sOutput.write(message.length());
+				sOutput.write(message.getBytes());
 			} catch (IOException e) {
 				logger("ERROR: Nachricht an " + username + " wurde nicht versendet!");
 				logger(e.toString());
